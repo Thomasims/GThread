@@ -41,16 +41,16 @@ GMOD_MODULE_OPEN() {
 		LUA_SET( CFunction, "newThread", GThread::Create );
 		LUA_SET( CFunction, "newChannel", GThreadChannel::Create );
 		LUA_SET( CFunction, "newPacket", GThreadPacket::Create );
-		LUA_SET( CFunction, "GetDetached", GThread::GetDetached );
+		LUA_SET( CFunction, "getDetached", GThread::GetDetached );
 
-		LUA_SET( Number, "CONTEXTTYPE_ISOLATED", 1 );
+		LUA_SET( Number, "CONTEXTTYPE_ISOLATED", ContextType::Isolated );
 		
-		LUA_SET( Number, "HEAD_W", 1 );
-		LUA_SET( Number, "HEAD_R", 2 );
+		LUA_SET( Number, "HEAD_W", Head::Write );
+		LUA_SET( Number, "HEAD_R", Head::Read );
 		
-		LUA_SET( Number, "LOC_START", 1 );
-		LUA_SET( Number, "LOC_CUR", 2 );
-		LUA_SET( Number, "LOC_END", 3 );
+		LUA_SET( Number, "LOC_START", Location::Start );
+		LUA_SET( Number, "LOC_CUR", Location::Current );
+		LUA_SET( Number, "LOC_END", Location::End );
 	}
 	LUA->SetField(-2, "gthread");
 	LUA->Pop();

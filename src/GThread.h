@@ -23,22 +23,25 @@ private:
 	~GThread();
 
 	void DetachLua();
-	void ReattachLua();
-	void Run(std::string code);
+	void ReattachLua( bool update = true );
+	void Run(string code);
 
 	static void ThreadMain( GThread* );
 
-	std::thread* m_thread;
-	std::map<std::string, DoubleChannel> m_channels;
+	thread* m_thread;
+	map<string, DoubleChannel> m_channels;
 
-	std::queue<std::string> m_codequeue;
-	std::mutex m_codemtx;
-	std::condition_variable m_codecvar;
+	queue<string> m_codequeue;
+	mutex m_codemtx;
+	condition_variable m_codecvar;
 
 	bool m_attached;
 
+	unsigned int m_id;
+
 	static unsigned int count;
-	static std::map<unsigned int, GThread*> detached;
+	static map<unsigned int, GThread*> detached;
+	static mutex detachedmtx;
 
 public:
 
