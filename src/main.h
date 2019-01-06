@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GarrysMod/Lua/Interface.h"
+#include "lua_headers.h"
 #include "def.h"
 
 using namespace GarrysMod::Lua;

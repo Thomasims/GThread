@@ -10,8 +10,8 @@
 extern int TypeID_Thread;
 
 typedef struct DoubleChannel {
-	GThreadChannel* outgoing = NULL;
-	GThreadChannel* incoming = NULL;
+	class GThreadChannel* outgoing;
+	class GThreadChannel* incoming;
 } DoubleChannel;
 
 class GThread {
@@ -47,6 +47,9 @@ public:
 
 	//Public functions
 	static void SetupMetaFields( ILuaBase* LUA );
+	
+	lua_Integer Wait( const lua_Integer* refs, size_t n );
+	void WakeUp( const char* channel );
 
 	LUA_METHOD_DECL( Create );
 	LUA_METHOD_DECL( GetDetached );
