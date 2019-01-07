@@ -78,6 +78,21 @@ lua_State* newstate() {
 	return state;
 }
 
+struct string_source {
+	string* code;
+	bool done;
+};
+
+const char* string_reader(lua_State* state, void* data, size_t* size) {
+	struct string_source* source = (struct string_source*) data;
+	if (source->done) return NULL;
+	source->done = true;
+
+	const string& code = *source->code;
+	*size = code.length();
+	return code.c_str();
+}
+
 void GThread::ThreadMain( GThread* handle ) {
 	// Create Lua state
 	// Wait on code queue
@@ -93,18 +108,12 @@ void GThread::ThreadMain( GThread* handle ) {
 			string code = handle->m_codequeue.front();
 			handle->m_codequeue.pop();
 
-			int ret = luaL_loadstring( state, code.c_str() ) || lua_pcall( state, 0, 0, NULL );
+			struct string_source source { &code, false };
 
-			switch( ret ) {
-				case LUA_OK:
-					break;
-				case LUA_ERRRUN:
-				case LUA_ERRSYNTAX:
-				case LUA_ERRMEM:
-				case LUA_ERRERR:
-					onerror( state );
-					break;
-			}
+			int ret = lua_load( state, string_reader, &source, "GThread" ) || lua_pcall( state, 0, 0, NULL );
+
+			if( ret )
+				onerror( state );
 		}
 	}
 
