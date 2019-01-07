@@ -1,25 +1,30 @@
 #pragma once
 
-#include "main.h"
-
-extern int TypeID_Channel;
+#include "lua_headers.h"
+#include "def.h"
+#include "GThreadPacket.h"
 
 class GThreadChannel {
 
 private:
 
 	//Private functions
-	~GThreadChannel();
 
 public:
 
 	//Public functions
 	GThreadChannel();
-	static void SetupMetaFields( ILuaBase* LUA );
+	virtual ~GThreadChannel();
 
-	LUA_METHOD_DECL( Create );
+	static void Setup( lua_State* state );
+	
+	static int PushGThreadChannel( lua_State*, GThreadChannel* );
+	static int Create( lua_State* );
 
 	//Lua methods
-	LUA_METHOD_DECL( __gc );
-
+	static int _gc( lua_State* );
 };
+
+typedef struct GThreadChannelHandle {
+	GThreadChannel* channel;
+} GThreadChannelHandle;

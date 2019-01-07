@@ -9,16 +9,30 @@ GThreadPacket::~GThreadPacket() {
 }
 
 
-void GThreadPacket::SetupMetaFields(ILuaBase* LUA) {
-	LUA_SET( CFunction, "__gc", __gc );
+void GThreadPacket::Setup( lua_State* state ) {
+	luaL_newmetatable( state, "GThreadPacket" );
+	{
+		lua_pushvalue( state, -1 );
+		lua_setfield( state, -2, "__index" );
+
+		lua_pushcfunction( state, _gc );
+		lua_setfield( state, -2, "__gc" );
+	}
+	lua_pop( state, 1 );
 }
 
-LUA_METHOD_IMPL(GThreadPacket::__gc) {
+int GThreadPacket::_gc( lua_State* state ) {
 	return 0;
 }
 
-LUA_METHOD_IMPL(GThreadPacket::Create) {
-	GThreadPacket* packet = new GThreadPacket();
-	LUA->PushUserType(packet, TypeID_Packet);
+int GThreadPacket::PushGThreadPacket( lua_State* state, GThreadPacket* packet ) {
+	GThreadPacketHandle* handle = (GThreadPacketHandle*) lua_newuserdata( state, sizeof( GThreadPacketHandle ) );
+	handle->packet = packet;
+	luaL_getmetatable( state, "GThreadPacket" );
+	lua_setmetatable( state, -2 );
 	return 1;
+}
+
+int GThreadPacket::Create( lua_State* state ) {
+	return PushGThreadPacket( state, new GThreadPacket() );
 }

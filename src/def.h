@@ -1,20 +1,16 @@
+#pragma once
 
-#define LUA_METHOD_DECL( FUNC ) \
-        static int FUNC##__Imp( GarrysMod::Lua::ILuaBase* LUA ); \
-        static int FUNC( lua_State* L ) \
-        { \
-            GarrysMod::Lua::ILuaBase* LUA = L->luabase; \
-            LUA->SetState(L); \
-            return FUNC##__Imp( LUA ); \
-        };
+#define luaD_setcfunction( L, name, func ) \
+	lua_pushcfunction( L, func ); \
+	lua_setfield( L, -2, name );
 
-#define LUA_METHOD_IMPL( FUNC ) \
-        int FUNC##__Imp( GarrysMod::Lua::ILuaBase* LUA )
+#define luaD_setnumber( L, name, number ) \
+	lua_pushnumber( L, number ); \
+	lua_setfield( L, -2, name );
 
-#define LUA_SET( TYPE, NAME, VAL ) \
-        LUA->Push##TYPE(VAL); \
-        LUA->SetField(-2, NAME)
-
+#define luaD_setstring( L, name, string ) \
+	lua_pushstring( L, string ); \
+	lua_setfield( L, -2, name );
 
 enum ContextType {
 	Isolated

@@ -5,55 +5,32 @@
 #include <string>
 #include "main.h"
 
-int TypeID_Thread, TypeID_Channel, TypeID_Packet;
+using namespace GarrysMod::Lua;
 
 GMOD_MODULE_OPEN() {
-	TypeID_Thread = LUA->CreateMetaTable("GThread");
-	{
-		LUA->Push(-1);
-		LUA->SetField(-2, "__index");
+	GThread::Setup( state );
+	GThreadChannel::Setup( state );
+	GThreadPacket::Setup( state );
 
-		GThread::SetupMetaFields(LUA);
-	}
-	LUA->Pop();
-	
-	TypeID_Channel = LUA->CreateMetaTable("GThreadChannel");
+	lua_newtable( state );
 	{
-		LUA->Push(-1);
-		LUA->SetField(-2, "__index");
-		
-		GThreadChannel::SetupMetaFields(LUA);
-	}
-	LUA->Pop();
-	
-	TypeID_Packet = LUA->CreateMetaTable("GThreadPacket");
-	{
-		LUA->Push(-1);
-		LUA->SetField(-2, "__index");
-		
-		GThreadPacket::SetupMetaFields(LUA);
-	}
-	LUA->Pop();
+		luaD_setcfunction( state, "newThread", GThread::Create );
+		luaD_setcfunction( state, "newChannel", GThreadChannel::Create );
+		luaD_setcfunction( state, "newPacket", GThreadPacket::Create );
+		luaD_setcfunction( state, "getDetached", GThread::GetDetached );
 
-	LUA->PushSpecial(GarrysMod::Lua::SPECIAL_GLOB);
-	LUA->CreateTable();
-	{
-		LUA_SET( CFunction, "newThread", GThread::Create );
-		LUA_SET( CFunction, "newChannel", GThreadChannel::Create );
-		LUA_SET( CFunction, "newPacket", GThreadPacket::Create );
-		LUA_SET( CFunction, "getDetached", GThread::GetDetached );
+		luaD_setnumber( state, "CONTEXTTYPE_ISOLATED", ContextType::Isolated );
+		
+		luaD_setnumber( state, "HEAD_W", Head::Write );
+		luaD_setnumber( state, "HEAD_R", Head::Read );
+		
+		luaD_setnumber( state, "LOC_START", Location::Start );
+		luaD_setnumber( state, "LOC_CUR", Location::Current );
+		luaD_setnumber( state, "LOC_END", Location::End );
 
-		LUA_SET( Number, "CONTEXTTYPE_ISOLATED", ContextType::Isolated );
-		
-		LUA_SET( Number, "HEAD_W", Head::Write );
-		LUA_SET( Number, "HEAD_R", Head::Read );
-		
-		LUA_SET( Number, "LOC_START", Location::Start );
-		LUA_SET( Number, "LOC_CUR", Location::Current );
-		LUA_SET( Number, "LOC_END", Location::End );
+		luaD_setstring( state, "Version", "0.1" );
 	}
-	LUA->SetField(-2, "gthread");
-	LUA->Pop();
+	lua_setglobal( state, "gthread" );
 
 	return 0;
 }

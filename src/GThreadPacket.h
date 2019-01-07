@@ -1,25 +1,29 @@
 #pragma once
 
-#include "main.h"
-
-extern int TypeID_Packet;
+#include "lua_headers.h"
+#include "def.h"
 
 class GThreadPacket {
 
 private:
 
 	//Private functions
-	~GThreadPacket();
 
 public:
 
 	//Public functions
 	GThreadPacket();
-	static void SetupMetaFields( ILuaBase* LUA );
+	virtual ~GThreadPacket();
 
-	LUA_METHOD_DECL( Create );
+	static void Setup( lua_State* state );
+	
+	static int PushGThreadPacket( lua_State*, GThreadPacket* );
+	static int Create( lua_State* );
 
 	//Lua methods
-	LUA_METHOD_DECL( __gc );
-
+	static int _gc( lua_State* );
 };
+
+typedef struct GThreadPacketHandle {
+	GThreadPacket* packet;
+} GThreadPacketHandle;

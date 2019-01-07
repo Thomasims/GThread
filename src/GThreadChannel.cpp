@@ -9,16 +9,30 @@ GThreadChannel::~GThreadChannel() {
 }
 
 
-void GThreadChannel::SetupMetaFields(ILuaBase* LUA) {
-	LUA_SET( CFunction, "__gc", __gc );
+void GThreadChannel::Setup( lua_State* state ) {
+	luaL_newmetatable( state, "GThreadChannel" );
+	{
+		lua_pushvalue( state, -1 );
+		lua_setfield( state, -2, "__index" );
+
+		lua_pushcfunction( state, _gc );
+		lua_setfield( state, -2, "__gc" );
+	}
+	lua_pop( state, 1 );
 }
 
-LUA_METHOD_IMPL(GThreadChannel::__gc) {
+int GThreadChannel::_gc( lua_State* state ) {
 	return 0;
 }
 
-LUA_METHOD_IMPL(GThreadChannel::Create) {
-	GThreadChannel* channel = new GThreadChannel();
-	LUA->PushUserType(channel, TypeID_Channel);
+int GThreadChannel::PushGThreadChannel( lua_State* state, GThreadChannel* channel ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) lua_newuserdata( state, sizeof( GThreadChannelHandle ) );
+	handle->channel = channel;
+	luaL_getmetatable( state, "GThreadChannel" );
+	lua_setmetatable( state, -2 );
 	return 1;
+}
+
+int GThreadChannel::Create( lua_State* state ) {
+	return PushGThreadChannel( state, new GThreadChannel() );
 }

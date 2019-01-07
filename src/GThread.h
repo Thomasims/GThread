@@ -5,9 +5,12 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include "main.h"
 
-extern int TypeID_Thread;
+#include "lua_headers.h"
+#include "def.h"
+#include "GThreadChannel.h"
+
+using namespace std;
 
 typedef struct DoubleChannel {
 	class GThreadChannel* outgoing;
@@ -20,7 +23,6 @@ private:
 
 	//Private functions
 	GThread();
-	~GThread();
 
 	void DetachLua();
 	void ReattachLua( bool update = true );
@@ -46,19 +48,27 @@ private:
 public:
 
 	//Public functions
-	static void SetupMetaFields( ILuaBase* LUA );
+	virtual ~GThread();
+
+	static void Setup( lua_State* state );
 	
 	lua_Integer Wait( const lua_Integer* refs, size_t n );
 	void WakeUp( const char* channel );
 
-	LUA_METHOD_DECL( Create );
-	LUA_METHOD_DECL( GetDetached );
+	static int PushGThread( lua_State*, GThread* );
+	static int Create( lua_State* );
+	static int GetDetached( lua_State* );
 
 	//Lua methods
-	LUA_METHOD_DECL( __gc );
-	LUA_METHOD_DECL( Run );
-	LUA_METHOD_DECL( OpenChannel );
-	LUA_METHOD_DECL( AttachChannel );
-	LUA_METHOD_DECL( Kill );
-
+	static int _gc( lua_State* );
+	static int Run( lua_State* );
+	static int OpenChannel( lua_State* );
+	static int AttachChannel( lua_State* );
+	static int Kill( lua_State* );
 };
+
+typedef struct GThreadHandle {
+	GThread* thread;
+} GThreadHandle;
+
+int luaopen_engine (lua_State *L, GThread* thread);

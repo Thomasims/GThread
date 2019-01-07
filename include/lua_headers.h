@@ -5,7 +5,10 @@
 
 #pragma once
 
+#define GMOD_ALLOW_DEPRECATED
 #include "GarrysMod/Lua/Interface.h"
+
+// TODO: Clean up this mess
 
 #define LUA_MULTRET	(-1)
 
@@ -277,4 +280,3 @@ DLL_EXPORT int            luaopen_package      (lua_State *L);
 DLL_EXPORT int            luaopen_string       (lua_State *L);
 DLL_EXPORT int            luaopen_table        (lua_State *L);
            int            luaopen_coroutine    (lua_State *L);
-           int            luaopen_engine       (lua_State *L, GThread* thread);
