@@ -1,6 +1,8 @@
 
 #include "lua_headers.h"
 #include "GThread.h"
+#include "GThreadChannel.h"
+#include "GThreadPacket.h"
 
 static int engine_block( lua_State* L ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( L, 1, "engine" );
@@ -17,19 +19,32 @@ static int engine_block( lua_State* L ) {
 	return handle->object->Wait( L, args, actualnargs ) || luaL_error( L, "Killed" );
 }
 
-static int engine_openchannel( lua_State* L ) {
-	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( L, 1, "engine" );
-	return 0;
-}
-
 static int engine_createtimer( lua_State* L ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( L, 1, "engine" );
 	return 0;
 }
 
+static int engine_openchannel( lua_State* L ) {
+	GThreadHandle* handle = (GThreadHandle*)luaL_checkudata(L, 1, "engine");
+	GThread* thread = handle->object;
+	if (!thread) return luaL_error(L, "Invalid GThread");
+
+	const char* name = luaL_checkstring(L, 2);
+
+	auto pair = thread->OpenChannels(name);
+
+	GThreadChannel::PushGThreadChannel(L, pair.outgoing, thread);
+	GThreadChannel::PushGThreadChannel(L, pair.incoming, thread);
+
+	return 2;
+}
+
 int luaopen_engine( lua_State *L, GThread* thread ) {
 	GThreadHandle* handle = (GThreadHandle*) lua_newuserdata( L, sizeof(GThreadHandle) );
 	handle->object = thread;
+
+	GThreadChannel::Setup(L);
+	GThreadPacket::Setup(L);
 
 	luaL_newmetatable( L, "engine" );
 	{

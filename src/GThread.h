@@ -75,7 +75,7 @@ public:
 	lua_Integer SetupNotifier( Notifier* notifier, void* data );
 	void RemoveNotifier( lua_Integer id );
 
-	DoubleChannel GetChannels( string name );
+	DoubleChannel OpenChannels( string name );
 
 	static int PushGThread( lua_State*, GThread* );
 	static int Create( lua_State* );

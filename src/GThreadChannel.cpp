@@ -93,7 +93,7 @@ void GThreadChannel::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "PushPacket", PushPacket );
 		luaD_setcfunction( state, "GetHandle", GetHandle );
 		//luaD_setcfunction( state, "SetFilter", SetFilter ); // Postponed
-		luaD_setcfunction( state, "StartPacket", PushPacket );
+		luaD_setcfunction( state, "StartPacket", StartPacket );
 		luaD_setcfunction( state, "Close", Close );
 
 		luaD_setcfunction( state, "GetInPacket", GetInPacket );
@@ -103,6 +103,10 @@ void GThreadChannel::Setup( lua_State* state ) {
 }
 
 int GThreadChannel::PushGThreadChannel( lua_State* state, GThreadChannel* channel, GThread* parent ) {
+	if (!channel) {
+		lua_pushnil(state);
+		return 1;
+	}
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) lua_newuserdata( state, sizeof(GThreadChannelHandle) );
 
 	handle->object = channel;

@@ -44,6 +44,10 @@ int GThreadPacket::_gc( lua_State* state ) {
 }
 
 int GThreadPacket::PushGThreadPacket( lua_State* state, GThreadPacket* packet ) {
+	if (!packet) {
+		lua_pushnil(state);
+		return 1;
+	}
 	GThreadPacketHandle* handle = (GThreadPacketHandle*) lua_newuserdata( state, sizeof(GThreadPacketHandle) );
 	handle->object = packet;
 	++(packet->m_references);

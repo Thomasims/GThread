@@ -176,11 +176,20 @@ void GThread::RemoveNotifier( lua_Integer id ) {
 	m_notifiers.erase( id );
 }
 
-DoubleChannel GThread::GetChannels( string name ) {
-	auto& res = m_channels.find( name );
-	if ( res == end( m_channels ) )
-		return{ NULL, NULL };
-	return res->second;
+DoubleChannel GThread::OpenChannels( string name ) {
+	auto& res = m_channels.find(name);
+	if (res == end(m_channels)) {
+		GThreadChannel* outgoing = new GThreadChannel();
+		GThreadChannel* incoming = new GThreadChannel();
+
+		++(outgoing->m_references);
+		++(incoming->m_references);
+		
+		return m_channels[name] = { outgoing, incoming };
+	}
+	else {
+		return res->second;
+	}
 }
 
 void GThread::Setup( lua_State* state ) {
@@ -251,21 +260,11 @@ int GThread::OpenChannel( lua_State* state ) {
 	if ( !thread ) return luaL_error( state, "Invalid GThread" );
 
 	const char* name = luaL_checkstring( state, 2 );
-	auto& res = thread->m_channels.find( name );
-	if ( res == end( thread->m_channels ) ) {
-		GThreadChannel* outgoing = new GThreadChannel();
-		GThreadChannel* incoming = new GThreadChannel();
-		thread->m_channels[name] = { outgoing, incoming };
 
-		++(outgoing->m_references);
-		++(incoming->m_references);
+	auto pair = thread->OpenChannels(name);
 
-		GThreadChannel::PushGThreadChannel( state, outgoing, thread );
-		GThreadChannel::PushGThreadChannel( state, incoming, thread );
-	} else {
-		GThreadChannel::PushGThreadChannel( state, res->second.outgoing, thread );
-		GThreadChannel::PushGThreadChannel( state, res->second.incoming, thread );
-	}
+	GThreadChannel::PushGThreadChannel( state, pair.outgoing, thread );
+	GThreadChannel::PushGThreadChannel( state, pair.incoming, thread );
 
 	return 2;
 }
