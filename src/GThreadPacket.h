@@ -19,6 +19,9 @@ public:
 	GThreadPacket();
 	GThreadPacket( const GThreadPacket& );
 	virtual ~GThreadPacket();
+	
+	void Clear();
+	int GetBits();
 
 	static void Setup( lua_State* state );
 
@@ -32,5 +35,5 @@ public:
 };
 
 typedef struct GThreadPacketHandle {
-	GThreadPacket* packet;
+	GThreadPacket* object;
 } GThreadPacketHandle;

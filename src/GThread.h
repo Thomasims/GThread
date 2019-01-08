@@ -21,6 +21,11 @@ typedef struct DoubleChannel {
 	class GThreadChannel* incoming;
 } DoubleChannel;
 
+typedef struct NotifierInstance {
+	Notifier* notifier;
+	void* data;
+};
+
 class GThread {
 
 private:
@@ -39,7 +44,7 @@ private:
 	thread* m_thread;
 	map<string, DoubleChannel> m_channels;
 
-	map<lua_Integer, Notifier*> m_notifiers;
+	map<lua_Integer, NotifierInstance> m_notifiers;
 	mutex m_notifiersmtx;
 	condition_variable m_notifierscvar;
 	lua_Integer m_topnotifierid;
@@ -67,8 +72,10 @@ public:
 	lua_Integer Wait( lua_State* state, const lua_Integer* refs, size_t n );
 	void WakeUp();
 
-	lua_Integer SetupNotifier( Notifier* notifier );
+	lua_Integer SetupNotifier( Notifier* notifier, void* data );
 	void RemoveNotifier( lua_Integer id );
+
+	DoubleChannel GetChannels( string name );
 
 	static int PushGThread( lua_State*, GThread* );
 	static int Create( lua_State* );
@@ -83,7 +90,7 @@ public:
 };
 
 typedef struct GThreadHandle {
-	GThread* thread;
+	GThread* object;
 } GThreadHandle;
 
 int luaopen_engine( lua_State *L, GThread* thread );

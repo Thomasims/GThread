@@ -11,7 +11,8 @@ GThreadChannel::~GThreadChannel() {
 }
 
 
-bool GThreadChannel::ShouldResume( chrono::system_clock::time_point* until ) {
+bool GThreadChannel::ShouldResume( chrono::system_clock::time_point* until, void* data ) {
+	// TODO: Check filter with data
 	m_queuemtx.lock();
 	if ( !m_queue.empty() )
 		return true;
@@ -19,16 +20,29 @@ bool GThreadChannel::ShouldResume( chrono::system_clock::time_point* until ) {
 	return false;
 }
 
-int GThreadChannel::PushReturnValues( lua_State* state ) {
+int GThreadChannel::PushReturnValues( lua_State* state, void* data ) {
+	// TODO: Check filter with data
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) data;
+	GThreadPacket* packet = PopPacket();
+
+	if ( handle->in_packet )
+		delete handle->in_packet;
+
+	handle->in_packet = packet;
+
+	lua_pushinteger( state, packet->GetBits() );
+	return 1;
+}
+
+GThreadPacket* GThreadChannel::PopPacket() {
 	GThreadPacket* packet = m_queue.front();
-	GThreadPacket::PushGThreadPacket( state, packet );
 	m_queue.pop();
 	m_queuemtx.unlock();
 
 	if ( CheckClosing() )
 		delete this;
 
-	return 0;
+	return packet;
 }
 
 void GThreadChannel::QueuePacket( GThreadPacket* packet ) {
@@ -58,18 +72,13 @@ bool GThreadChannel::CheckClosing() {
 	lock_guard<mutex> lck( m_queuemtx );
 	if ( m_closed && m_queue.empty() ) {
 		for ( GThreadChannelHandle* handle : m_handles ) {
-			handle->channel = NULL;
+			handle->object = NULL;
 			if ( handle->parent )
 				handle->parent->RemoveNotifier( handle->id );
 		}
 		return true;
 	}
 	return false;
-}
-
-
-GThreadPacket* GThreadChannel::FinishPacket() {
-	return NULL; // TODO: Internal packet
 }
 
 
@@ -86,6 +95,9 @@ void GThreadChannel::Setup( lua_State* state ) {
 		//luaD_setcfunction( state, "SetFilter", SetFilter ); // Postponed
 		luaD_setcfunction( state, "StartPacket", PushPacket );
 		luaD_setcfunction( state, "Close", Close );
+
+		luaD_setcfunction( state, "GetInPacket", GetInPacket );
+		luaD_setcfunction( state, "GetOutPacket", GetOutPacket );
 	}
 	lua_pop( state, 1 );
 }
@@ -93,10 +105,12 @@ void GThreadChannel::Setup( lua_State* state ) {
 int GThreadChannel::PushGThreadChannel( lua_State* state, GThreadChannel* channel, GThread* parent ) {
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) lua_newuserdata( state, sizeof(GThreadChannelHandle) );
 
-	handle->channel = channel;
+	handle->object = channel;
 	handle->parent = parent;
 	if ( parent )
-		handle->id = parent->SetupNotifier( channel );
+		handle->id = parent->SetupNotifier( channel, (void*) handle );
+	handle->in_packet = NULL;
+	handle->out_packet = NULL;
 	++(channel->m_references);
 
 	channel->AddHandle( handle );
@@ -110,44 +124,62 @@ int GThreadChannel::Create( lua_State* state ) {
 	return PushGThreadChannel( state, new GThreadChannel() );
 }
 
+GThreadChannel* GThreadChannel::Get( lua_State* state, int narg ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, narg, "GThreadChannel" );
+	if ( !handle->object ) luaL_error( state, "Invalid GThreadChannel" );
+
+	return handle->object;
+}
+
 int GThreadChannel::_gc( lua_State* state ) {
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
-	if ( !handle->channel ) return luaL_error( state, "Invalid GThreadChannel" );
+	GThreadChannel* channel = handle->object;
+	if ( !channel ) return 0;
 
-	handle->channel->RemoveHandle( handle );
+	channel->RemoveHandle( handle );
 
-	if ( ! --handle->channel->m_references )
-		delete handle->channel;
+	if ( ! --channel->m_references )
+		delete channel;
 
-	handle->channel = NULL;
+	handle->object = NULL;
 	if ( handle->parent )
 		handle->parent->RemoveNotifier( handle->id );
+
+	if ( handle->in_packet )
+		delete handle->in_packet;
+	if ( handle->out_packet )
+		delete handle->out_packet;
 
 	return 0;
 }
 
 int GThreadChannel::PullPacket( lua_State* state ) {
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
-	GThreadChannel* channel = handle->channel;
+	GThreadChannel* channel = handle->object;
 	if ( !channel ) return 0;
 
-	if ( channel->ShouldResume( NULL ) )
-		return channel->PushReturnValues( state );
+	if ( channel->ShouldResume( NULL, handle ) ) {
+		GThreadPacket* packet = channel->PopPacket();
+		GThreadPacket::PushGThreadPacket( state, packet );
+		return 1;
+	}
 
 	return 0;
 }
 
 int GThreadChannel::PushPacket( lua_State* state ) {
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
-	GThreadChannel* channel = handle->channel;
+	GThreadChannel* channel = handle->object;
 	if ( !channel ) return luaL_error( state, "Invalid GThreadChannel" );
 	if ( channel->m_closed ) return luaL_error( state, "This GThreadChannel is closed" );
 
 	GThreadPacket* packet;
-	if ( lua_isuserdata( state, 2 ) )
+	if ( lua_isuserdata( state, 2 ) ) {
 		packet = GThreadPacket::Get( state, 2 );
-	else
-		packet = channel->FinishPacket();
+	} else {
+		packet = handle->out_packet;
+		handle->out_packet = NULL;
+	}
 
 	if ( packet )
 		channel->QueuePacket( packet );
@@ -157,7 +189,7 @@ int GThreadChannel::PushPacket( lua_State* state ) {
 
 int GThreadChannel::GetHandle( lua_State* state ) {
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
-	if ( !handle->channel ) return 0;
+	if ( !handle->object ) return 0;
 
 	lua_pushinteger( state, handle->id );
 
@@ -166,23 +198,52 @@ int GThreadChannel::GetHandle( lua_State* state ) {
 
 int GThreadChannel::StartPacket( lua_State* state ) {
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
-	GThreadChannel* channel = handle->channel;
+	GThreadChannel* channel = handle->object;
 	if ( !channel ) return luaL_error( state, "Invalid GThreadChannel" );
 	if ( channel->m_closed ) return luaL_error( state, "This GThreadChannel is closed" );
 
-	// TODO: Internal packet
+	if ( handle->out_packet )
+		handle->out_packet->Clear();
+	else
+		handle->out_packet = new GThreadPacket();
 
 	return 0;
 }
 
 int GThreadChannel::Close( lua_State* state ) {
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
-	GThreadChannel* channel = handle->channel;
+	GThreadChannel* channel = handle->object;
 	if ( !channel || channel->m_closed ) return 0;
 
 	channel->m_closed = true;
 	if ( channel->CheckClosing() )
 		delete channel;
+
+	return 0;
+}
+
+int GThreadChannel::GetInPacket( lua_State* state ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
+	if ( !handle->object ) return 0;
+
+	if ( handle->in_packet ) {
+		GThreadPacket::PushGThreadPacket( state, handle->in_packet );
+		handle->in_packet = NULL;
+		return 1;
+	}
+
+	return 0;
+}
+
+int GThreadChannel::GetOutPacket( lua_State* state ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
+	if ( !handle->object ) return 0;
+
+	if ( handle->out_packet ) {
+		GThreadPacket::PushGThreadPacket( state, handle->out_packet );
+		handle->out_packet = NULL;
+		return 1;
+	}
 
 	return 0;
 }

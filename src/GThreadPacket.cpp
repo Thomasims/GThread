@@ -1,7 +1,7 @@
 #include "GThreadPacket.h"
 
 GThreadPacket::GThreadPacket() {
-
+	m_references = 0;
 }
 
 GThreadPacket::GThreadPacket( const GThreadPacket& other ) {
@@ -10,6 +10,14 @@ GThreadPacket::GThreadPacket( const GThreadPacket& other ) {
 
 GThreadPacket::~GThreadPacket() {
 
+}
+
+void GThreadPacket::Clear() {
+
+}
+
+int GThreadPacket::GetBits() {
+	return 0;
 }
 
 
@@ -26,18 +34,18 @@ void GThreadPacket::Setup( lua_State* state ) {
 
 int GThreadPacket::_gc( lua_State* state ) {
 	GThreadPacketHandle* handle = (GThreadPacketHandle*) luaL_checkudata( state, 1, "GThreadPacket" );
-	if ( !handle->packet ) return luaL_error( state, "Invalid GThreadPacket" );
+	if ( !handle->object ) return 0;
 
-	if ( ! --handle->packet->m_references )
-		delete handle->packet;
+	if ( ! --handle->object->m_references )
+		delete handle->object;
 
-	handle->packet = NULL;
+	handle->object = NULL;
 	return 0;
 }
 
 int GThreadPacket::PushGThreadPacket( lua_State* state, GThreadPacket* packet ) {
 	GThreadPacketHandle* handle = (GThreadPacketHandle*) lua_newuserdata( state, sizeof(GThreadPacketHandle) );
-	handle->packet = packet;
+	handle->object = packet;
 	++(packet->m_references);
 	luaL_getmetatable( state, "GThreadPacket" );
 	lua_setmetatable( state, -2 );
@@ -50,7 +58,7 @@ int GThreadPacket::Create( lua_State* state ) {
 
 GThreadPacket* GThreadPacket::Get( lua_State* state, int narg ) {
 	GThreadPacketHandle* handle = (GThreadPacketHandle*) luaL_checkudata( state, narg, "GThreadPacket" );
-	if ( !handle->packet ) luaL_error( state, "Invalid GThreadPacket" );
+	if ( !handle->object ) luaL_error( state, "Invalid GThreadPacket" );
 
-	return handle->packet;
+	return handle->object;
 }

@@ -12,18 +12,25 @@
 class GThreadPacket;
 
 typedef struct GThreadChannelHandle {
-	GThreadChannel* channel;
+	GThreadChannel* object;
 	GThread* parent;
 	lua_Integer id;
+
+	GThreadPacket* in_packet;
+	GThreadPacket* out_packet;
 } GThreadChannelHandle;
 
 using namespace std;
 
 class GThreadChannel: Notifier {
-
+	friend class GThread;
 private:
 
 	//Private functions
+	GThreadPacket* PopPacket();
+	void QueuePacket( GThreadPacket* );
+
+	bool CheckClosing();
 
 private:
 
@@ -41,21 +48,18 @@ public:
 	GThreadChannel();
 	virtual ~GThreadChannel();
 	
-	bool ShouldResume( chrono::system_clock::time_point* until ) override;
-	int PushReturnValues( lua_State* state ) override;
-	void QueuePacket( GThreadPacket* );
+	bool ShouldResume( chrono::system_clock::time_point* until, void* data ) override;
+	int PushReturnValues( lua_State* state, void* data ) override;
 
 	void AddHandle( GThreadChannelHandle* handle );
 	void RemoveHandle( GThreadChannelHandle* handle );
-
-	bool CheckClosing();
-
-	GThreadPacket* FinishPacket();
 
 	static void Setup( lua_State* state );
 
 	static int PushGThreadChannel( lua_State* state, GThreadChannel* channel, GThread* parent = NULL );
 	static int Create( lua_State* state );
+
+	static GThreadChannel* Get( lua_State* state, int narg );
 
 	//Lua methods
 	static int _gc( lua_State* state );
@@ -65,4 +69,7 @@ public:
 	static int GetHandle( lua_State* state );
 	static int StartPacket( lua_State* state );
 	static int Close( lua_State* state );
+	
+	static int GetInPacket( lua_State* state );
+	static int GetOutPacket( lua_State* state );
 };

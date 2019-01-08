@@ -14,7 +14,7 @@ static int engine_block( lua_State* L ) {
 		}
 	}
 
-	return handle->thread->Wait( L, args, actualnargs ) || luaL_error( L, "Killed" );
+	return handle->object->Wait( L, args, actualnargs ) || luaL_error( L, "Killed" );
 }
 
 static int engine_openchannel( lua_State* L ) {
@@ -29,7 +29,7 @@ static int engine_createtimer( lua_State* L ) {
 
 int luaopen_engine( lua_State *L, GThread* thread ) {
 	GThreadHandle* handle = (GThreadHandle*) lua_newuserdata( L, sizeof(GThreadHandle) );
-	handle->thread = thread;
+	handle->object = thread;
 
 	luaL_newmetatable( L, "engine" );
 	{
