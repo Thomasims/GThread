@@ -5,8 +5,16 @@
 
 #pragma once
 
-#define GMOD_ALLOW_DEPRECATED
-#include "GarrysMod/Lua/Interface.h"
+#include <stddef.h>
+
+typedef struct lua_State lua_State;
+
+#ifdef _WIN32
+    #define DLL_EXPORT extern "C" __declspec( dllexport )
+#else
+    #define DLL_EXPORT extern "C" __attribute__((visibility("default")))
+#endif
+
 
 // TODO: Clean up this mess
 

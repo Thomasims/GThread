@@ -26,7 +26,7 @@ int GThreadPacket::_gc( lua_State* state ) {
 }
 
 int GThreadPacket::PushGThreadPacket( lua_State* state, GThreadPacket* packet ) {
-	GThreadPacketHandle* handle = (GThreadPacketHandle*) lua_newuserdata( state, sizeof( GThreadPacketHandle ) );
+	GThreadPacketHandle* handle = (GThreadPacketHandle*) lua_newuserdata( state, sizeof(GThreadPacketHandle) );
 	handle->packet = packet;
 	luaL_getmetatable( state, "GThreadPacket" );
 	lua_setmetatable( state, -2 );

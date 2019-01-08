@@ -17,7 +17,7 @@ public:
 	virtual ~GThreadChannel();
 
 	static void Setup( lua_State* state );
-	
+
 	static int PushGThreadChannel( lua_State*, GThreadChannel* );
 	static int Create( lua_State* );
 

@@ -26,7 +26,7 @@ private:
 
 	void DetachLua();
 	void ReattachLua( bool update = true );
-	void Run(string code);
+	void Run( string code );
 
 	static void ThreadMain( GThread* );
 
@@ -51,7 +51,7 @@ public:
 	virtual ~GThread();
 
 	static void Setup( lua_State* state );
-	
+
 	lua_Integer Wait( const lua_Integer* refs, size_t n );
 	void WakeUp( const char* channel );
 
@@ -71,4 +71,4 @@ typedef struct GThreadHandle {
 	GThread* thread;
 } GThreadHandle;
 
-int luaopen_engine (lua_State *L, GThread* thread);
+int luaopen_engine( lua_State *L, GThread* thread );

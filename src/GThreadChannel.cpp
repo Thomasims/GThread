@@ -26,7 +26,7 @@ int GThreadChannel::_gc( lua_State* state ) {
 }
 
 int GThreadChannel::PushGThreadChannel( lua_State* state, GThreadChannel* channel ) {
-	GThreadChannelHandle* handle = (GThreadChannelHandle*) lua_newuserdata( state, sizeof( GThreadChannelHandle ) );
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) lua_newuserdata( state, sizeof(GThreadChannelHandle) );
 	handle->channel = channel;
 	luaL_getmetatable( state, "GThreadChannel" );
 	lua_setmetatable( state, -2 );

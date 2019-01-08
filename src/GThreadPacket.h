@@ -16,7 +16,7 @@ public:
 	virtual ~GThreadPacket();
 
 	static void Setup( lua_State* state );
-	
+
 	static int PushGThreadPacket( lua_State*, GThreadPacket* );
 	static int Create( lua_State* );
 

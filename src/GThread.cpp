@@ -22,39 +22,39 @@ GThread::~GThread() {
 void GThread::DetachLua() {
 	m_attached = false;
 	m_codecvar.notify_all();
-	
-	lock_guard<mutex> lck(detachedmtx);
-	detached[ m_id ] = this;
+
+	lock_guard<mutex> lck( detachedmtx );
+	detached[m_id] = this;
 }
 
 void GThread::ReattachLua( bool update ) {
 	m_attached = true;
-	
-	if( update ) {
-		lock_guard<mutex> lck(detachedmtx);
+
+	if ( update ) {
+		lock_guard<mutex> lck( detachedmtx );
 		detached.erase( m_id );
 	}
 }
 
 void GThread::Run( string code ) {
-	lock_guard<mutex> lck(m_codemtx);
+	lock_guard<mutex> lck( m_codemtx );
 	m_codequeue.push( code );
 	m_codecvar.notify_all();
 }
 
-int log(lua_State* state) {
+int log( lua_State* state ) {
 	size_t size = 0;
 	const char* text = luaL_checklstring( state, 1, &size );
-	string output(text, size);
+	string output( text, size );
 	std::cout << "log: " << text << std::endl;
 	return 0;
 }
 
-int onerror(lua_State* state) {
+int onerror( lua_State* state ) {
 	size_t size = 0;
 	const char* text = luaL_checklstring( state, -1, &size );
 	std::cout << "error: " << text << std::endl;
-	string output(text, size);
+	string output( text, size );
 	return 0;
 }
 
@@ -83,9 +83,9 @@ struct string_source {
 	bool done;
 };
 
-const char* string_reader(lua_State* state, void* data, size_t* size) {
+const char* string_reader( lua_State* state, void* data, size_t* size ) {
 	struct string_source* source = (struct string_source*) data;
-	if (source->done) return NULL;
+	if ( source->done ) return NULL;
 	source->done = true;
 
 	const string& code = *source->code;
@@ -101,10 +101,11 @@ void GThread::ThreadMain( GThread* handle ) {
 	luaopen_engine( state, handle );
 
 	unique_lock<mutex> lck( handle->m_codemtx );
-	while( !handle->m_codequeue.empty() || handle->m_attached ) {
-		if( handle->m_codequeue.empty() ) {
+	while ( !handle->m_codequeue.empty() || handle->m_attached ) {
+		if ( handle->m_codequeue.empty() ) {
 			handle->m_codecvar.wait( lck );
-		} else {
+		}
+		else {
 			string code = handle->m_codequeue.front();
 			handle->m_codequeue.pop();
 
@@ -112,7 +113,7 @@ void GThread::ThreadMain( GThread* handle ) {
 
 			int ret = lua_load( state, string_reader, &source, "GThread" ) || lua_pcall( state, 0, 0, NULL );
 
-			if( ret )
+			if ( ret )
 				onerror( state );
 		}
 	}
@@ -154,7 +155,7 @@ void GThread::Setup( lua_State* state ) {
 }
 
 int GThread::PushGThread( lua_State* state, GThread* thread ) {
-	GThreadHandle* handle = (GThreadHandle*) lua_newuserdata( state, sizeof( GThreadHandle ) );
+	GThreadHandle* handle = (GThreadHandle*) lua_newuserdata( state, sizeof(GThreadHandle) );
 	handle->thread = thread;
 	luaL_getmetatable( state, "GThread" );
 	lua_setmetatable( state, -2 );
@@ -166,11 +167,11 @@ int GThread::Create( lua_State* state ) {
 }
 
 int GThread::GetDetached( lua_State* state ) {
-	lock_guard<mutex> lck(detachedmtx);
+	lock_guard<mutex> lck( detachedmtx );
 	lua_newtable( state );
 	{
 		int i = 1;
-		for( auto& el: detached ) {
+		for ( auto& el : detached ) {
 			el.second->ReattachLua( false );
 			lua_pushnumber( state, i );
 			PushGThread( state, el.second );
@@ -183,7 +184,7 @@ int GThread::GetDetached( lua_State* state ) {
 
 int GThread::_gc( lua_State* state ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
-	if( !handle->thread ) return luaL_error( state, "Invalid GThread" );
+	if ( !handle->thread ) return luaL_error( state, "Invalid GThread" );
 	handle->thread->DetachLua();
 	handle->thread = NULL;
 	return 0;
@@ -191,7 +192,7 @@ int GThread::_gc( lua_State* state ) {
 
 int GThread::Run( lua_State* state ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
-	if( !handle->thread ) return luaL_error( state, "Invalid GThread" );
+	if ( !handle->thread ) return luaL_error( state, "Invalid GThread" );
 
 	size_t size;
 	const char* code = luaL_checklstring( state, 2, &size );
@@ -202,18 +203,18 @@ int GThread::Run( lua_State* state ) {
 
 int GThread::OpenChannel( lua_State* state ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
-	if( !handle->thread ) return luaL_error( state, "Invalid GThread" );
+	if ( !handle->thread ) return luaL_error( state, "Invalid GThread" );
 	return 0;
 }
 
 int GThread::AttachChannel( lua_State* state ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
-	if( !handle->thread ) return luaL_error( state, "Invalid GThread" );
+	if ( !handle->thread ) return luaL_error( state, "Invalid GThread" );
 	return 0;
 }
 
 int GThread::Kill( lua_State* state ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
-	if( !handle->thread ) return luaL_error( state, "Invalid GThread" );
+	if ( !handle->thread ) return luaL_error( state, "Invalid GThread" );
 	return 0;
 }
