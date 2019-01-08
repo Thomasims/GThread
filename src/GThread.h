@@ -24,7 +24,7 @@ typedef struct DoubleChannel {
 typedef struct NotifierInstance {
 	Notifier* notifier;
 	void* data;
-};
+} NotifierInstance;
 
 class GThread {
 
