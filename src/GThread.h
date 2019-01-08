@@ -5,12 +5,16 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <iostream>
+#include <chrono>
 
 #include "lua_headers.h"
 #include "def.h"
-#include "GThreadChannel.h"
 
 using namespace std;
+
+class Notifier;
+class GThreadChannel;
 
 typedef struct DoubleChannel {
 	class GThreadChannel* outgoing;
@@ -30,14 +34,22 @@ private:
 
 	static void ThreadMain( GThread* );
 
+private:
+
 	thread* m_thread;
 	map<string, DoubleChannel> m_channels;
+
+	map<lua_Integer, Notifier*> m_notifiers;
+	mutex m_notifiersmtx;
+	condition_variable m_notifierscvar;
+	lua_Integer m_topnotifierid;
 
 	queue<string> m_codequeue;
 	mutex m_codemtx;
 	condition_variable m_codecvar;
 
 	bool m_attached;
+	bool m_killed;
 
 	unsigned int m_id;
 
@@ -52,8 +64,11 @@ public:
 
 	static void Setup( lua_State* state );
 
-	lua_Integer Wait( const lua_Integer* refs, size_t n );
-	void WakeUp( const char* channel );
+	lua_Integer Wait( lua_State* state, const lua_Integer* refs, size_t n );
+	void WakeUp();
+
+	lua_Integer SetupNotifier( Notifier* notifier );
+	void RemoveNotifier( lua_Integer id );
 
 	static int PushGThread( lua_State*, GThread* );
 	static int Create( lua_State* );

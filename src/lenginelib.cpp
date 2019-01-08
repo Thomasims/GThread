@@ -13,13 +13,8 @@ static int engine_block( lua_State* L ) {
 			args[actualnargs++] = ref;
 		}
 	}
-	lua_Integer ret = handle->thread->Wait( args, actualnargs );
 
-	if ( !ret )
-		return luaL_error( L, "Killed" );
-
-	lua_pushinteger( L, ret );
-	return 1;
+	return handle->thread->Wait( L, args, actualnargs ) || luaL_error( L, "Killed" );
 }
 
 static int engine_openchannel( lua_State* L ) {

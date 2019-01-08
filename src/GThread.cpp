@@ -1,7 +1,6 @@
 #include "GThread.h"
-
-#include <iostream>
-#include <chrono>
+#include "GThreadChannel.h"
+#include "Notifier.h"
 
 unsigned int GThread::count = 0;
 map<unsigned int, GThread*> GThread::detached;
@@ -9,10 +8,11 @@ mutex GThread::detachedmtx;
 
 GThread::GThread() {
 	m_attached = true;
+	m_id = count++;
+	m_topnotifierid = 0;
+
 	m_thread = new thread( ThreadMain, this );
 	m_thread->detach();
-
-	m_id = count++;
 }
 
 GThread::~GThread() {
@@ -94,40 +94,78 @@ const char* string_reader( lua_State* state, void* data, size_t* size ) {
 }
 
 void GThread::ThreadMain( GThread* handle ) {
-	// Create Lua state
-	// Wait on code queue
-	// Destroy if empty & detached
 	lua_State* state = newstate();
 	luaopen_engine( state, handle );
 
-	unique_lock<mutex> lck( handle->m_codemtx );
-	while ( !handle->m_codequeue.empty() || handle->m_attached ) {
-		if ( handle->m_codequeue.empty() ) {
-			handle->m_codecvar.wait( lck );
-		}
-		else {
-			string code = handle->m_codequeue.front();
-			handle->m_codequeue.pop();
+	{
+		unique_lock<mutex> lck( handle->m_codemtx );
+		while ( !handle->m_codequeue.empty() || handle->m_attached ) {
+			if ( handle->m_codequeue.empty() ) {
+				handle->m_codecvar.wait( lck );
+			}
+			else {
+				string code = handle->m_codequeue.front();
+				handle->m_codequeue.pop();
 
-			struct string_source source { &code, false };
+				handle->m_killed = false;
 
-			int ret = lua_load( state, string_reader, &source, "GThread" ) || lua_pcall( state, 0, 0, NULL );
+				struct string_source source { &code, false };
 
-			if ( ret )
-				onerror( state );
+				int ret = lua_load( state, string_reader, &source, "GThread" ) || lua_pcall( state, 0, 0, NULL );
+
+				if ( ret )
+					onerror( state );
+			}
 		}
 	}
 
 	lua_close( state );
+
+	{
+		lock_guard<mutex> lck( detachedmtx );
+		detached.erase( handle->m_id );
+	}
+
+	delete handle;
 }
 
 
-lua_Integer GThread::Wait( const lua_Integer* refs, size_t n ) {
-	return 0;
+lua_Integer GThread::Wait( lua_State* state, const lua_Integer* refs, size_t n ) {
+	unique_lock<mutex> lck( m_notifiersmtx );
+
+	int ret = 0;
+	chrono::system_clock::time_point until = chrono::system_clock::now() + chrono::hours( 1 );
+
+	while ( !m_killed ) {
+		for ( unsigned int i = 0; i < n; i++ ) {
+			Notifier* notifier = m_notifiers[refs[i]];
+			if ( notifier->ShouldResume( &until ) ) {
+				lua_pushinteger( state, refs[i] );
+				return notifier->PushReturnValues( state ) + 1;
+			}
+		}
+		m_notifierscvar.wait_until( lck, until );
+	}
+
+	return 0; // TODO: Explore the possibility of throwing an exception instead
 }
 
-void GThread::WakeUp( const char* channel ) {
+void GThread::WakeUp() {
+	m_notifierscvar.notify_all();
+}
 
+lua_Integer GThread::SetupNotifier( Notifier* notifier ) {
+	lock_guard<mutex> lck( m_notifiersmtx );
+
+	lua_Integer id = m_topnotifierid++;
+	m_notifiers[id] = notifier;
+
+	return id;
+}
+
+void GThread::RemoveNotifier( lua_Integer id ) {
+	lock_guard<mutex> lck( m_notifiersmtx );
+	m_notifiers.erase( id );
 }
 
 void GThread::Setup( lua_State* state ) {
@@ -135,21 +173,12 @@ void GThread::Setup( lua_State* state ) {
 	{
 		lua_pushvalue( state, -1 );
 		lua_setfield( state, -2, "__index" );
-
-		lua_pushcfunction( state, _gc );
-		lua_setfield( state, -2, "__gc" );
-
-		lua_pushcfunction( state, Run );
-		lua_setfield( state, -2, "Run" );
-
-		lua_pushcfunction( state, OpenChannel );
-		lua_setfield( state, -2, "OpenChannel" );
-
-		lua_pushcfunction( state, AttachChannel );
-		lua_setfield( state, -2, "AttachChannel" );
-
-		lua_pushcfunction( state, Kill );
-		lua_setfield( state, -2, "Kill" );
+		
+		luaD_setcfunction( state, "__gc", _gc );
+		luaD_setcfunction( state, "Run", Run );
+		luaD_setcfunction( state, "OpenChannel", OpenChannel );
+		luaD_setcfunction( state, "AttachChannel", AttachChannel );
+		luaD_setcfunction( state, "Kill", Kill );
 	}
 	lua_pop( state, 1 );
 }
@@ -216,5 +245,9 @@ int GThread::AttachChannel( lua_State* state ) {
 int GThread::Kill( lua_State* state ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
 	if ( !handle->thread ) return luaL_error( state, "Invalid GThread" );
+
+	handle->thread->m_killed = true;
+	handle->thread->WakeUp();
+
 	return 0;
 }

@@ -9,19 +9,26 @@ private:
 
 	//Private functions
 
+private:
+
+	int m_references;
+
 public:
 
 	//Public functions
 	GThreadPacket();
+	GThreadPacket( const GThreadPacket& );
 	virtual ~GThreadPacket();
 
 	static void Setup( lua_State* state );
 
-	static int PushGThreadPacket( lua_State*, GThreadPacket* );
-	static int Create( lua_State* );
+	static int PushGThreadPacket( lua_State* state, GThreadPacket* packet );
+	static int Create( lua_State* state );
+
+	static GThreadPacket* Get( lua_State* state, int narg );
 
 	//Lua methods
-	static int _gc( lua_State* );
+	static int _gc( lua_State* state );
 };
 
 typedef struct GThreadPacketHandle {
