@@ -102,7 +102,7 @@ void GThread::ThreadMain( GThread* handle ) {
 
 				handle->m_killed = false;
 
-				int ret = luaL_loadbuffer( state, code.c_str(), code.length(), "GThread" ) || lua_pcall( state, 0, 0, NULL );
+				int ret = luaL_loadbuffer( state, code.data(), code.length(), "GThread" ) || lua_pcall( state, 0, 0, NULL );
 
 				if ( ret )
 					onerror( state );

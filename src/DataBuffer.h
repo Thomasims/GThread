@@ -19,7 +19,7 @@ public:
 	~DataBuffer();
 
 	void Allocate(uint64_t pos);
-	void PrepareWrite(uint64_t length);
+	uint64_t PrepareWrite(uint64_t length);
 	void Wrote(uint64_t length);
 	
 	void WriteUInt(uint64_t data, uint8_t bits);
@@ -31,6 +31,7 @@ public:
 private:
 
 	const size_t m_blocksize;
+	const size_t m_blocksizebits{ m_blocksize * 8 };
 	std::vector<char*> m_blocks;
 
 	uint64_t m_writehead;
