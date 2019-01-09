@@ -86,21 +86,6 @@ lua_State* newstate() {
 	return state;
 }
 
-struct string_source {
-	string* code;
-	bool done;
-};
-
-const char* string_reader( lua_State* state, void* data, size_t* size ) {
-	struct string_source* source = (struct string_source*) data;
-	if ( source->done ) return NULL;
-	source->done = true;
-
-	const string& code = *source->code;
-	*size = code.length();
-	return code.c_str();
-}
-
 void GThread::ThreadMain( GThread* handle ) {
 	lua_State* state = newstate();
 	luaopen_engine( state, handle );
@@ -117,9 +102,7 @@ void GThread::ThreadMain( GThread* handle ) {
 
 				handle->m_killed = false;
 
-				struct string_source source { &code, false };
-
-				int ret = lua_load( state, string_reader, &source, "GThread" ) || lua_pcall( state, 0, 0, NULL );
+				int ret = luaL_loadbuffer( state, code.c_str(), code.length(), "GThread" ) || lua_pcall( state, 0, 0, NULL );
 
 				if ( ret )
 					onerror( state );
@@ -181,6 +164,8 @@ DoubleChannel GThread::OpenChannels( string name ) {
 	if (res == end(m_channels)) {
 		GThreadChannel* outgoing = new GThreadChannel();
 		GThreadChannel* incoming = new GThreadChannel();
+
+		outgoing->SetSibling( incoming );
 
 		++(outgoing->m_references);
 		++(incoming->m_references);
@@ -263,10 +248,9 @@ int GThread::OpenChannel( lua_State* state ) {
 
 	auto pair = thread->OpenChannels(name);
 
-	GThreadChannel::PushGThreadChannel( state, pair.outgoing, thread );
-	GThreadChannel::PushGThreadChannel( state, pair.incoming, thread );
-
-	return 2;
+	return
+		GThreadChannel::PushGThreadChannel( state, pair.outgoing, thread ) +
+		GThreadChannel::PushGThreadChannel( state, pair.incoming, thread );
 }
 
 int GThread::AttachChannel( lua_State* state ) {
@@ -282,7 +266,6 @@ int GThread::AttachChannel( lua_State* state ) {
 		channels = &(thread->m_channels[name] = { NULL, NULL });
 	else
 		channels = &res->second;
-	//if ( thread->m_channels.count( name ) ) return luaL_error( state, "A channel with that name already exists" );
 
 	if ( nargs >= 3 && lua_isuserdata( state, 3 ) && !channels->outgoing ) {
 		channels->outgoing = GThreadChannel::Get( state, 3 );
@@ -293,6 +276,9 @@ int GThread::AttachChannel( lua_State* state ) {
 		channels->incoming = GThreadChannel::Get( state, 4 );
 		++(channels->incoming->m_references);
 	}
+
+	if ( channels->outgoing && channels->incoming )
+		channels->outgoing->SetSibling( channels->incoming );
 
 	return 0;
 }

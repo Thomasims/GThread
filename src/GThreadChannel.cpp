@@ -4,10 +4,11 @@
 GThreadChannel::GThreadChannel() {
 	m_references = 0;
 	m_closed = false;
+	m_sibling = NULL;
 }
 
 GThreadChannel::~GThreadChannel() {
-
+	DetachSibling();
 }
 
 
@@ -68,6 +69,23 @@ void GThreadChannel::RemoveHandle( GThreadChannelHandle* handle ) {
 	m_handles.erase( handle );
 }
 
+void GThreadChannel::DetachSibling() {
+	if ( m_sibling ) {
+		m_sibling->m_sibling = NULL;
+		m_sibling = NULL;
+	}
+}
+
+void GThreadChannel::SetSibling( GThreadChannel* other ) {
+	if ( m_sibling == other ) return;
+
+	DetachSibling();
+	other->DetachSibling();
+	m_sibling = other;
+	other->m_sibling = this;
+}
+
+
 bool GThreadChannel::CheckClosing() {
 	lock_guard<mutex> lck( m_queuemtx );
 	if ( m_closed && m_queue.empty() ) {
@@ -103,10 +121,7 @@ void GThreadChannel::Setup( lua_State* state ) {
 }
 
 int GThreadChannel::PushGThreadChannel( lua_State* state, GThreadChannel* channel, GThread* parent ) {
-	if (!channel) {
-		lua_pushnil(state);
-		return 1;
-	}
+	if (!channel) return 0;
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) lua_newuserdata( state, sizeof(GThreadChannelHandle) );
 
 	handle->object = channel;
@@ -185,8 +200,13 @@ int GThreadChannel::PushPacket( lua_State* state ) {
 		handle->out_packet = NULL;
 	}
 
-	if ( packet )
-		channel->QueuePacket( packet );
+	if ( packet ) {
+		if ( channel->m_sibling ) {
+			channel->m_sibling->QueuePacket( packet );
+		} else {
+			channel->QueuePacket( packet );
+		}
+	}
 
 	return 0;
 }

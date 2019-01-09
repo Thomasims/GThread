@@ -32,10 +32,14 @@ private:
 
 	bool CheckClosing();
 
+	void DetachSibling();
+
 private:
 
 	int m_references;
 	bool m_closed;
+
+	GThreadChannel* m_sibling;
 
 	queue<GThreadPacket*> m_queue;
 	mutex m_queuemtx;
@@ -53,6 +57,8 @@ public:
 
 	void AddHandle( GThreadChannelHandle* handle );
 	void RemoveHandle( GThreadChannelHandle* handle );
+
+	void SetSibling( GThreadChannel* other );
 
 	static void Setup( lua_State* state );
 

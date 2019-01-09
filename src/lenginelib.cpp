@@ -33,10 +33,9 @@ static int engine_openchannel( lua_State* L ) {
 
 	auto pair = thread->OpenChannels(name);
 
-	GThreadChannel::PushGThreadChannel(L, pair.outgoing, thread);
-	GThreadChannel::PushGThreadChannel(L, pair.incoming, thread);
-
-	return 2;
+	return
+		GThreadChannel::PushGThreadChannel(L, pair.incoming, thread) +
+		GThreadChannel::PushGThreadChannel(L, pair.outgoing, thread);
 }
 
 int luaopen_engine( lua_State *L, GThread* thread ) {
