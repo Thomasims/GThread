@@ -87,6 +87,7 @@ void GThreadChannel::SetSibling( GThreadChannel* other ) {
 
 
 bool GThreadChannel::CheckClosing() {
+	{ return false; }
 	lock_guard<mutex> lck( m_queuemtx );
 	if ( m_closed && m_queue.empty() ) {
 		for ( GThreadChannelHandle* handle : m_handles ) {

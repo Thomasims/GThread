@@ -22,7 +22,7 @@ typedef struct GThreadChannelHandle {
 
 using namespace std;
 
-class GThreadChannel: Notifier {
+class GThreadChannel : Notifier {
 	friend class GThread;
 private:
 
@@ -51,7 +51,7 @@ public:
 	//Public functions
 	GThreadChannel();
 	virtual ~GThreadChannel();
-	
+
 	bool ShouldResume( chrono::system_clock::time_point* until, void* data ) override;
 	int PushReturnValues( lua_State* state, void* data ) override;
 
@@ -69,13 +69,13 @@ public:
 
 	//Lua methods
 	static int _gc( lua_State* state );
-	
+
 	static int PullPacket( lua_State* state );
 	static int PushPacket( lua_State* state );
 	static int GetHandle( lua_State* state );
 	static int StartPacket( lua_State* state );
 	static int Close( lua_State* state );
-	
+
 	static int GetInPacket( lua_State* state );
 	static int GetOutPacket( lua_State* state );
 };

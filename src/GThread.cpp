@@ -2,6 +2,12 @@
 #include "GThreadChannel.h"
 #include "Notifier.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#endif
+
 unsigned int GThread::count = 0;
 map<unsigned int, GThread*> GThread::detached;
 mutex GThread::detachedmtx;
@@ -12,10 +18,10 @@ GThread::GThread() {
 	m_topnotifierid = 0;
 
 	m_thread = new thread( ThreadMain, this );
-	m_thread->detach();
 }
 
 GThread::~GThread() {
+	m_thread->detach();
 	delete m_thread;
 	for ( const auto& res : m_channels ) {
 		if ( res.second.outgoing )
@@ -48,6 +54,14 @@ void GThread::Run( string code ) {
 	lock_guard<mutex> lck( m_codemtx );
 	m_codequeue.push( code );
 	m_codecvar.notify_all();
+}
+
+void GThread::Terminate() {
+#ifdef _WIN32
+	::TerminateThread(m_thread->native_handle(), 1);
+#else
+	pthread_cancel(m_thread->native_handle());
+#endif
 }
 
 int log( lua_State* state ) {
@@ -87,6 +101,10 @@ lua_State* newstate() {
 }
 
 void GThread::ThreadMain( GThread* handle ) {
+#ifndef _WIN32
+	pthread_setcanceltype( PTHREAD_CANCEL_ASYNCHRONOUS, NULL );
+#endif
+
 	lua_State* state = newstate();
 	luaopen_engine( state, handle );
 
@@ -188,6 +206,7 @@ void GThread::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "OpenChannel", OpenChannel );
 		luaD_setcfunction( state, "AttachChannel", AttachChannel );
 		luaD_setcfunction( state, "Kill", Kill );
+		luaD_setcfunction( state, "Terminate", Terminate );
 	}
 	lua_pop( state, 1 );
 }
@@ -289,6 +308,15 @@ int GThread::Kill( lua_State* state ) {
 
 	handle->object->m_killed = true;
 	handle->object->WakeUp();
+
+	return 0;
+}
+
+int GThread::Terminate( lua_State* state ) {
+	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
+	if ( !handle->object ) return luaL_error( state, "Invalid GThread" );
+
+	handle->object->Terminate();
 
 	return 0;
 }

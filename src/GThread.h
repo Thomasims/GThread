@@ -37,6 +37,8 @@ private:
 	void ReattachLua( bool update = true );
 	void Run( string code );
 
+	void Terminate();
+
 	static void ThreadMain( GThread* );
 
 private:
@@ -87,6 +89,7 @@ public:
 	static int OpenChannel( lua_State* );
 	static int AttachChannel( lua_State* );
 	static int Kill( lua_State* );
+	static int Terminate( lua_State* );
 };
 
 typedef struct GThreadHandle {
