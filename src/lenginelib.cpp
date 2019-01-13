@@ -1,5 +1,6 @@
 
 #include "lua_headers.h"
+#include "def.h"
 #include "GThread.h"
 #include "GThreadChannel.h"
 #include "GThreadPacket.h"
@@ -58,6 +59,13 @@ int luaopen_engine( lua_State *L, GThread* thread ) {
 
 		lua_pushcfunction( L, engine_createtimer );
 		lua_setfield( L, -2, "CreateTimer" );
+
+		luaD_setnumber( L, "HEAD_W", Head::Write );
+		luaD_setnumber( L, "HEAD_R", Head::Read );
+
+		luaD_setnumber( L, "LOC_START", Location::Start );
+		luaD_setnumber( L, "LOC_CUR", Location::Current );
+		luaD_setnumber( L, "LOC_END", Location::End );
 	}
 	lua_setmetatable( L, -2 );
 

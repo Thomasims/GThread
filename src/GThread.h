@@ -55,8 +55,8 @@ private:
 	mutex m_codemtx;
 	condition_variable m_codecvar;
 
-	bool m_attached;
-	bool m_killed;
+	bool m_attached{true};
+	bool m_killed{false};
 
 	unsigned int m_id;
 

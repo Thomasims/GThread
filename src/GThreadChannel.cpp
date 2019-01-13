@@ -31,7 +31,7 @@ int GThreadChannel::PushReturnValues( lua_State* state, void* data ) {
 
 	handle->in_packet = packet;
 
-	lua_pushinteger( state, packet->GetBits() );
+	lua_pushinteger( state, packet->GetBytes() );
 	return 1;
 }
 
@@ -117,6 +117,32 @@ void GThreadChannel::Setup( lua_State* state ) {
 
 		luaD_setcfunction( state, "GetInPacket", GetInPacket );
 		luaD_setcfunction( state, "GetOutPacket", GetOutPacket );
+
+		luaD_setcfunction( state, "WriteByte", WriteNumber<int8_t> );
+		luaD_setcfunction( state, "WriteShort", WriteNumber<int16_t> );
+		luaD_setcfunction( state, "WriteInt", WriteNumber<int32_t> );
+		luaD_setcfunction( state, "WriteLong", WriteNumber<int64_t> );
+		luaD_setcfunction( state, "WriteUByte", WriteNumber<uint8_t> );
+		luaD_setcfunction( state, "WriteUShort", WriteNumber<uint16_t> );
+		luaD_setcfunction( state, "WriteUInt", WriteNumber<uint32_t> );
+		luaD_setcfunction( state, "WriteULong", WriteNumber<uint64_t> );
+		luaD_setcfunction( state, "WriteFloat", WriteNumber<float> );
+		luaD_setcfunction( state, "WriteDouble", WriteNumber<double> );
+		luaD_setcfunction( state, "WriteData", WriteData );
+		luaD_setcfunction( state, "WriteString", WriteString );
+
+		luaD_setcfunction( state, "ReadByte", ReadNumber<int8_t> );
+		luaD_setcfunction( state, "ReadShort", ReadNumber<int16_t> );
+		luaD_setcfunction( state, "ReadInt", ReadNumber<int32_t> );
+		luaD_setcfunction( state, "ReadLong", ReadNumber<int64_t> );
+		luaD_setcfunction( state, "ReadUByte", ReadNumber<uint8_t> );
+		luaD_setcfunction( state, "ReadUShort", ReadNumber<uint16_t> );
+		luaD_setcfunction( state, "ReadUInt", ReadNumber<uint32_t> );
+		luaD_setcfunction( state, "ReadULong", ReadNumber<uint64_t> );
+		luaD_setcfunction( state, "ReadFloat", ReadNumber<float> );
+		luaD_setcfunction( state, "ReadDouble", ReadNumber<double> );
+		luaD_setcfunction( state, "ReadData", ReadData );
+		luaD_setcfunction( state, "ReadString", ReadString );
 	}
 	lua_pop( state, 1 );
 }
@@ -271,4 +297,75 @@ int GThreadChannel::GetOutPacket( lua_State* state ) {
 	}
 
 	return 0;
+}
+
+
+template<class T>
+int GThreadChannel::WriteNumber( lua_State* state ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
+	GThreadPacket* packet = handle->out_packet;
+	if ( !packet ) return 0;
+
+	lua_pushinteger( state, packet->Write<T>( static_cast<T>( luaL_checknumber( state, 2 ) ) ) );
+	return 1;
+}
+
+int GThreadChannel::WriteData( lua_State* state ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
+	GThreadPacket* packet = handle->out_packet;
+	if ( !packet ) return 0;
+
+	size_t len;
+	const char* data = luaL_checklstring( state, 2, &len );
+	auto asked_len = size_t( luaL_checknumber( state, 3 ) );
+
+	lua_pushinteger( state, packet->WriteData( data, asked_len > len ? len : asked_len ) );
+	return 1;
+}
+
+int GThreadChannel::WriteString( lua_State* state ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
+	GThreadPacket* packet = handle->out_packet;
+	if ( !packet ) return 0;
+
+	size_t len;
+	const char* data = luaL_checklstring( state, 2, &len );
+
+	lua_pushinteger( state, packet->Write( len ) + packet->WriteData( data, len ) );
+	return 1;
+}
+
+
+template<class T>
+int GThreadChannel::ReadNumber( lua_State* state ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
+	GThreadPacket* packet = handle->in_packet;
+	if ( !packet ) return 0;
+
+	lua_pushnumber( state, lua_Number( packet->Read<T>() ) );
+	return 1;
+}
+
+int GThreadChannel::ReadData( lua_State* state ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
+	GThreadPacket* packet = handle->in_packet;
+	if ( !packet ) return 0;
+
+	std::string data = packet->ReadData( size_t( luaL_checknumber( state, 2 ) ) );
+	lua_pushlstring( state, data.data(), data.length() );
+
+	return 1;
+}
+
+int GThreadChannel::ReadString( lua_State* state ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
+	GThreadPacket* packet = handle->in_packet;
+	if ( !packet ) return 0;
+
+	size_t len = packet->Read<size_t>();
+
+	std::string data = packet->ReadData( len );
+	lua_pushlstring( state, data.data(), data.length() );
+
+	return 1;
 }

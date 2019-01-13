@@ -2,6 +2,7 @@
 
 #include <string>
 #include <cstdint>
+#include <memory>
 
 #include "lua_headers.h"
 #include "def.h"
@@ -15,30 +16,28 @@ private:
 	//Private functions
 
 	template<class T>
-	int Write( lua_State* state, T data );
-
-	int WriteData( lua_State* state, const char* data, size_t len );
-
+	size_t Write( T data );
+	size_t WriteData( const char* data, size_t len );
 
 	template<class T>
 	T Read();
+	std::string ReadData( size_t len );
 
-	int ReadData( lua_State* state, size_t len );
+	size_t Seek( Head head, Location loc, ptrdiff_t bytes );
 
 private:
 
-	int m_references;
+	int m_references{ 0 };
 	Buffer m_buffer;
 
 public:
 
 	//Public functions
-	GThreadPacket();
+	GThreadPacket() = default;
 	GThreadPacket( const GThreadPacket& );
-	virtual ~GThreadPacket();
 
 	void Clear();
-	int GetBits();
+	int GetBytes();
 
 	static void Setup( lua_State* state );
 
@@ -52,33 +51,15 @@ public:
 
 	template<class T>
 	static int WriteNumber( lua_State* );
-	/*static int WriteByte( lua_State* );
-	static int WriteShort( lua_State* );
-	static int WriteInt( lua_State* );
-	static int WriteLong( lua_State* );
-	static int WriteUByte( lua_State* );
-	static int WriteUShort( lua_State* );
-	static int WriteUInt( lua_State* );
-	static int WriteULong( lua_State* );
-	static int WriteFloat( lua_State* );
-	static int WriteDouble( lua_State* );*/
 	static int WriteData( lua_State* );
 	static int WriteString( lua_State* );
 	
 	template<class T>
 	static int ReadNumber( lua_State* );
-	/*static int ReadByte( lua_State* );
-	static int ReadShort( lua_State* );
-	static int ReadInt( lua_State* );
-	static int ReadLong( lua_State* );
-	static int ReadUByte( lua_State* );
-	static int ReadUShort( lua_State* );
-	static int ReadUInt( lua_State* );
-	static int ReadULong( lua_State* );
-	static int ReadFloat( lua_State* );
-	static int ReadDouble( lua_State* );*/
 	static int ReadData( lua_State* );
 	static int ReadString( lua_State* );
+
+	static int Seek( lua_State* );
 };
 
 typedef struct GThreadPacketHandle {

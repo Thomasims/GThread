@@ -39,13 +39,13 @@ size_t Buffer::ReadBytes( void* dst, size_t bytes ) {
 	return bytes;
 }
 
-size_t Buffer::Seek( HeadType head, Location location, ptrdiff_t bytes ) {
+size_t Buffer::Seek( int head, int location, ptrdiff_t bytes ) {
 	size_t* p_head = NULL;
 	switch ( head ) {
-	case HeadType::HEAD_W:
+	case 0:
 		p_head = &m_writehead;
 		break;
-	case HeadType::HEAD_R:
+	case 1:
 		p_head = &m_readhead;
 		break;
 	default:
@@ -53,19 +53,19 @@ size_t Buffer::Seek( HeadType head, Location location, ptrdiff_t bytes ) {
 	}
 
 	switch ( location ) {
-	case Location::LOC_START:
+	case 0:
 		if ( bytes < 0 )
 			return *p_head = 0;
 		else if ( bytes > ptrdiff_t( m_written ) )
 			return *p_head = m_written;
 		return *p_head = bytes;
-	case Location::LOC_CUR:
+	case 1:
 		if ( -bytes > ptrdiff_t( *p_head ) )
 			return *p_head = 0;
 		else if ( bytes > ptrdiff_t( m_written - m_writehead ) )
 			return *p_head = m_written;
 		return *p_head = *p_head + bytes;
-	case Location::LOC_END:
+	case 2:
 		if ( bytes > 0 )
 			return *p_head = m_written;
 		else if ( -bytes > ptrdiff_t( m_written ) )
@@ -74,4 +74,15 @@ size_t Buffer::Seek( HeadType head, Location location, ptrdiff_t bytes ) {
 	default:
 		return 0;
 	}
+}
+
+size_t Buffer::Written() {
+	return m_written;
+}
+
+void Buffer::Clear() {
+	m_container.clear();
+	m_readhead = 0;
+	m_writehead = 0;
+	m_written = 0;
 }

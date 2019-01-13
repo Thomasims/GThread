@@ -13,6 +13,7 @@ map<unsigned int, GThread*> GThread::detached;
 mutex GThread::detachedmtx;
 
 GThread::GThread() {
+	m_killed = false;
 	m_attached = true;
 	m_id = count++;
 	m_topnotifierid = 0;
@@ -58,6 +59,7 @@ void GThread::Run( string code ) {
 
 void GThread::Terminate() {
 #ifdef _WIN32
+#pragma warning(suppress: 6258)
 	::TerminateThread(m_thread->native_handle(), 1);
 #else
 	pthread_cancel(m_thread->native_handle());
@@ -65,18 +67,18 @@ void GThread::Terminate() {
 }
 
 int log( lua_State* state ) {
-	size_t size = 0;
-	const char* text = luaL_checklstring( state, 1, &size );
-	string output( text, size );
-	std::cout << "log: " << text << std::endl;
+	int top = lua_gettop( state );
+	for( int i = 1; i <= top; i++ ) {
+		const char* text = lua_tolstring( state, i, NULL );
+		if( text )
+			std::cout << "log: " << text << std::endl;
+	}
 	return 0;
 }
 
 int onerror( lua_State* state ) {
-	size_t size = 0;
-	const char* text = luaL_checklstring( state, -1, &size );
+	const char* text = lua_tolstring( state, -1, NULL );
 	std::cout << "error: " << text << std::endl;
-	string output( text, size );
 	return 0;
 }
 
@@ -95,7 +97,7 @@ lua_State* newstate() {
 	luaopen_coroutine( state );
 
 	lua_pushcfunction( state, log );
-	lua_setglobal( state, "log" );
+	lua_setglobal( state, "print" );
 
 	return state;
 }

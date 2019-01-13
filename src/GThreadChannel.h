@@ -36,10 +36,10 @@ private:
 
 private:
 
-	int m_references;
-	bool m_closed;
+	int m_references{0};
+	bool m_closed{false};
 
-	GThreadChannel* m_sibling;
+	GThreadChannel* m_sibling{NULL};
 
 	queue<GThreadPacket*> m_queue;
 	mutex m_queuemtx;
@@ -78,4 +78,14 @@ public:
 
 	static int GetInPacket( lua_State* state );
 	static int GetOutPacket( lua_State* state );
+
+	template<class T>
+	static int WriteNumber( lua_State* );
+	static int WriteData( lua_State* );
+	static int WriteString( lua_State* );
+
+	template<class T>
+	static int ReadNumber( lua_State* );
+	static int ReadData( lua_State* );
+	static int ReadString( lua_State* );
 };
