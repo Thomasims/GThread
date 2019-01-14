@@ -10,6 +10,8 @@
 #include "Notifier.h"
 
 class GThreadPacket;
+class GThreadChannel;
+class GThread;
 
 typedef struct GThreadChannelHandle {
 	GThreadChannel* object;
@@ -19,8 +21,6 @@ typedef struct GThreadChannelHandle {
 	GThreadPacket* in_packet;
 	GThreadPacket* out_packet;
 } GThreadChannelHandle;
-
-using namespace std;
 
 class GThreadChannel : Notifier {
 	friend class GThread;
@@ -41,10 +41,10 @@ private:
 
 	GThreadChannel* m_sibling{NULL};
 
-	queue<GThreadPacket*> m_queue;
-	mutex m_queuemtx;
-	unordered_set<GThreadChannelHandle*> m_handles;
-	mutex m_handlesmtx;
+	std::queue<GThreadPacket*> m_queue;
+	std::mutex m_queuemtx;
+	std::unordered_set<GThreadChannelHandle*> m_handles;
+	std::mutex m_handlesmtx;
 
 public:
 
@@ -52,7 +52,7 @@ public:
 	GThreadChannel();
 	virtual ~GThreadChannel();
 
-	bool ShouldResume( chrono::system_clock::time_point* until, void* data ) override;
+	bool ShouldResume( std::chrono::system_clock::time_point* until, void* data ) override;
 	int PushReturnValues( lua_State* state, void* data ) override;
 
 	void AddHandle( GThreadChannelHandle* handle );

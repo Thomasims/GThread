@@ -1,7 +1,6 @@
 #pragma once
 
 #include "lua_headers.h"
-#include "GThread.h"
 #include <chrono>
 
 class Notifier {

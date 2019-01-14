@@ -1,4 +1,6 @@
 
+#include <chrono>
+
 #include "lua_headers.h"
 #include "def.h"
 #include "GThread.h"
@@ -22,7 +24,12 @@ static int engine_block( lua_State* L ) {
 
 static int engine_createtimer( lua_State* L ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( L, 1, "engine" );
-	return 0;
+	GThread* thread = handle->object;
+	if (!thread) return luaL_error(L, "Invalid GThread");
+
+	lua_pushinteger( L, thread->CreateTimer( std::chrono::system_clock::now() + std::chrono::milliseconds( luaL_checkinteger( L, 2 ) ) ) );
+
+	return 1;
 }
 
 static int engine_openchannel( lua_State* L ) {
@@ -59,6 +66,9 @@ int luaopen_engine( lua_State *L, GThread* thread ) {
 
 		lua_pushcfunction( L, engine_createtimer );
 		lua_setfield( L, -2, "CreateTimer" );
+
+		lua_pushcfunction( L, GThreadPacket::Create );
+		lua_setfield( L, -2, "newPacket" );
 
 		luaD_setnumber( L, "HEAD_W", Head::Write );
 		luaD_setnumber( L, "HEAD_R", Head::Read );

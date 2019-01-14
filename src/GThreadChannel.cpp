@@ -1,5 +1,8 @@
 #include "GThreadChannel.h"
 #include "GThreadPacket.h"
+#include "GThread.h"
+
+using namespace std;
 
 GThreadChannel::GThreadChannel() {
 	m_references = 0;

@@ -1,12 +1,13 @@
 #include "GThread.h"
 #include "GThreadChannel.h"
-#include "Notifier.h"
 
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <pthread.h>
 #endif
+
+using namespace std;
 
 unsigned int GThread::count = 0;
 map<unsigned int, GThread*> GThread::detached;
@@ -17,6 +18,8 @@ GThread::GThread() {
 	m_attached = true;
 	m_id = count++;
 	m_topnotifierid = 0;
+
+	SetupNotifier( (Notifier*) &m_timing, NULL );
 
 	m_thread = new thread( ThreadMain, this );
 }
@@ -150,7 +153,7 @@ lua_Integer GThread::Wait( lua_State* state, const lua_Integer* refs, size_t n )
 	while ( !m_killed ) {
 		for ( unsigned int i = 0; i < n; i++ ) {
 			NotifierInstance notifierins = m_notifiers[refs[i]];
-			if ( notifierins.notifier->ShouldResume( &until, notifierins.data ) ) {
+			if ( notifierins.notifier && notifierins.notifier->ShouldResume( &until, notifierins.data ) ) {
 				lua_pushinteger( state, refs[i] );
 				return notifierins.notifier->PushReturnValues( state, notifierins.data ) + 1;
 			}
@@ -177,6 +180,12 @@ lua_Integer GThread::SetupNotifier( Notifier* notifier, void* data ) {
 void GThread::RemoveNotifier( lua_Integer id ) {
 	lock_guard<mutex> lck( m_notifiersmtx );
 	m_notifiers.erase( id );
+}
+
+lua_Integer GThread::CreateTimer( std::chrono::system_clock::time_point when ) {
+	lua_Integer id = m_topnotifierid++;
+	m_timing.CreatePoint( when, id );
+	return id;
 }
 
 DoubleChannel GThread::OpenChannels( string name ) {

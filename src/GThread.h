@@ -10,8 +10,7 @@
 
 #include "lua_headers.h"
 #include "def.h"
-
-using namespace std;
+#include "Timing.hpp"
 
 class Notifier;
 class GThreadChannel;
@@ -35,7 +34,7 @@ private:
 
 	void DetachLua();
 	void ReattachLua( bool update = true );
-	void Run( string code );
+	void Run( std::string code );
 
 	void Terminate();
 
@@ -43,17 +42,19 @@ private:
 
 private:
 
-	thread* m_thread;
-	map<string, DoubleChannel> m_channels;
+	std::thread* m_thread;
+	std::map<std::string, DoubleChannel> m_channels;
 
-	map<lua_Integer, NotifierInstance> m_notifiers;
-	mutex m_notifiersmtx;
-	condition_variable m_notifierscvar;
+	Timing m_timing;
+
+	std::map<lua_Integer, NotifierInstance> m_notifiers;
+	std::mutex m_notifiersmtx;
+	std::condition_variable m_notifierscvar;
 	lua_Integer m_topnotifierid;
 
-	queue<string> m_codequeue;
-	mutex m_codemtx;
-	condition_variable m_codecvar;
+	std::queue<std::string> m_codequeue;
+	std::mutex m_codemtx;
+	std::condition_variable m_codecvar;
 
 	bool m_attached{true};
 	bool m_killed{false};
@@ -61,8 +62,8 @@ private:
 	unsigned int m_id;
 
 	static unsigned int count;
-	static map<unsigned int, GThread*> detached;
-	static mutex detachedmtx;
+	static std::map<unsigned int, GThread*> detached;
+	static std::mutex detachedmtx;
 
 public:
 
@@ -77,7 +78,9 @@ public:
 	lua_Integer SetupNotifier( Notifier* notifier, void* data );
 	void RemoveNotifier( lua_Integer id );
 
-	DoubleChannel OpenChannels( string name );
+	lua_Integer CreateTimer( std::chrono::system_clock::time_point );
+
+	DoubleChannel OpenChannels( std::string name );
 
 	static int PushGThread( lua_State*, GThread* );
 	static int Create( lua_State* );

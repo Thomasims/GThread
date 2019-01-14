@@ -1,5 +1,7 @@
 #include "GThreadPacket.h"
 
+using namespace std;
+
 GThreadPacket::GThreadPacket( const GThreadPacket& other )
 	: m_references{ 0 }
 	, m_buffer{ other.m_buffer }
