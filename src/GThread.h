@@ -1,5 +1,6 @@
 #pragma once
 
+#include <set>
 #include <map>
 #include <queue>
 #include <thread>
@@ -46,6 +47,7 @@ private:
 	std::map<std::string, DoubleChannel> m_channels;
 
 	Timing m_timing;
+	lua_Integer m_timingid;
 
 	std::map<lua_Integer, NotifierInstance> m_notifiers;
 	std::mutex m_notifiersmtx;
@@ -72,7 +74,7 @@ public:
 
 	static void Setup( lua_State* state );
 
-	lua_Integer Wait( lua_State* state, const lua_Integer* refs, size_t n );
+	lua_Integer Wait( lua_State* state, std::set<lua_Integer> refs );
 	void WakeUp();
 
 	lua_Integer SetupNotifier( Notifier* notifier, void* data );

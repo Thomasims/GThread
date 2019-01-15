@@ -19,7 +19,7 @@ GThread::GThread() {
 	m_id = count++;
 	m_topnotifierid = 0;
 
-	SetupNotifier( (Notifier*) &m_timing, NULL );
+	m_timingid = SetupNotifier( (Notifier*) &m_timing, this );
 
 	m_thread = new thread( ThreadMain, this );
 }
@@ -144,24 +144,36 @@ void GThread::ThreadMain( GThread* handle ) {
 }
 
 
-lua_Integer GThread::Wait( lua_State* state, const lua_Integer* refs, size_t n ) {
+lua_Integer GThread::Wait( lua_State* state, set<lua_Integer> refs ) {
 	unique_lock<mutex> lck( m_notifiersmtx );
 
 	int ret = 0;
 	chrono::system_clock::time_point until = chrono::system_clock::now() + chrono::hours( 1 );
 
+	for ( lua_Integer ref : refs ) { // This is absolute trash, rethink this whole notifiers thing
+		auto& it = m_notifiers.find( ref );
+		if ( it == end( m_notifiers ) )
+			continue;
+		NotifierInstance notifierins = it->second;
+		if ( !notifierins.notifier )
+			refs.insert( reinterpret_cast<lua_Integer>(notifierins.data) );
+	}
+
 	while ( !m_killed ) {
-		for ( unsigned int i = 0; i < n; i++ ) {
-			NotifierInstance notifierins = m_notifiers[refs[i]];
-			if ( notifierins.notifier && notifierins.notifier->ShouldResume( &until, notifierins.data ) ) {
-				lua_pushinteger( state, refs[i] );
+		for ( lua_Integer ref : refs ) {
+			auto& it = m_notifiers.find( ref );
+			if ( it == end( m_notifiers ) )
+				continue;
+			NotifierInstance notifierins = it->second;
+			if ( notifierins.notifier->ShouldResume( &until, notifierins.data ) ) {
+				lua_pushinteger( state, ref );
 				return notifierins.notifier->PushReturnValues( state, notifierins.data ) + 1;
 			}
 		}
 		m_notifierscvar.wait_until( lck, until );
 	}
 
-	return 0; // TODO: Explore the possibility of throwing an exception instead
+	return 0;
 }
 
 void GThread::WakeUp() {
@@ -183,7 +195,7 @@ void GThread::RemoveNotifier( lua_Integer id ) {
 }
 
 lua_Integer GThread::CreateTimer( std::chrono::system_clock::time_point when ) {
-	lua_Integer id = m_topnotifierid++;
+	lua_Integer id = SetupNotifier( nullptr, reinterpret_cast<void*>(m_timingid) );
 	m_timing.CreatePoint( when, id );
 	return id;
 }

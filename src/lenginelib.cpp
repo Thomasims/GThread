@@ -1,5 +1,6 @@
 
 #include <chrono>
+#include <set>
 
 #include "lua_headers.h"
 #include "def.h"
@@ -10,16 +11,16 @@
 static int engine_block( lua_State* L ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( L, 1, "engine" );
 
-	int nargs = lua_gettop( L ), actualnargs = 0;
-	lua_Integer* args = new int[nargs];
+	int nargs = lua_gettop( L );
+	std::set<lua_Integer> args;
 	for ( int i = 2; i <= nargs; ++i ) {
 		lua_Integer ref = luaL_optinteger( L, i, 0 );
 		if ( ref ) {
-			args[actualnargs++] = ref;
+			args.insert( ref );
 		}
 	}
 
-	return handle->object->Wait( L, args, actualnargs ) || luaL_error( L, "Killed" );
+	return handle->object->Wait( L, args ) || luaL_error( L, "Killed" );
 }
 
 static int engine_createtimer( lua_State* L ) {
