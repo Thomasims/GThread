@@ -208,9 +208,7 @@ int GThreadChannel::PullPacket( lua_State* state ) {
 	if ( !channel ) return 0;
 
 	if ( channel->ShouldResume( NULL, handle ) ) {
-		GThreadPacket* packet = channel->PopPacket();
-		GThreadPacket::PushGThreadPacket( state, packet );
-		return 1;
+		return channel->PushReturnValues( state, handle );
 	}
 
 	return 0;
