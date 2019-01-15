@@ -43,6 +43,10 @@ size_t GThreadPacket::Seek( Head head, Location loc, ptrdiff_t bytes ) {
 	return m_buffer.Seek( head == Head::Write ? 0 : 1, loc == Location::Start ? 0 : ( loc == Location::Current ? 1 : 2 ), bytes );
 }
 
+size_t GThreadPacket::Slice( size_t start, size_t end ) {
+	return m_buffer.Slice( start, end > start ? end - start : 0 );
+}
+
 
 void GThreadPacket::Setup( lua_State* state ) {
 	luaL_newmetatable( state, "GThreadPacket" );
@@ -79,6 +83,8 @@ void GThreadPacket::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "ReadString", ReadString );
 
 		luaD_setcfunction( state, "Seek", Seek );
+		luaD_setcfunction( state, "GetSize", GetSize );
+		luaD_setcfunction( state, "Slice", Slice );
 	}
 	lua_pop( state, 1 );
 }
@@ -199,4 +205,28 @@ int GThreadPacket::Seek( lua_State* state ) {
 
 	lua_pushinteger( state, packet->Seek( head, loc, bytes ) );
 	return 1;
+}
+
+int GThreadPacket::GetSize( lua_State* state ) {
+	GThreadPacketHandle* handle = (GThreadPacketHandle*) luaL_checkudata( state, 1, "GThreadPacket" );
+	GThreadPacket* packet = handle->object;
+	if ( !packet ) return 0;
+
+	lua_pushinteger( state, packet->GetBytes() );
+	return 1;
+}
+
+int GThreadPacket::Slice( lua_State* state ) {
+	GThreadPacketHandle* handle = (GThreadPacketHandle*) luaL_checkudata( state, 1, "GThreadPacket" );
+	GThreadPacket* packet = handle->object;
+	if ( !packet ) return 0;
+
+	size_t start = luaL_checkinteger( state, 2 );
+	size_t end = -1;
+	if ( lua_gettop( state ) > 2 )
+		end = luaL_checkinteger( state, 3 );
+
+	lua_pushinteger( state, packet->Slice( start, end ) );
+	return 1;
+
 }

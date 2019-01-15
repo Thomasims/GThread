@@ -16,6 +16,7 @@ public:
 
 	size_t Written();
 	void Clear();
+	size_t Slice( size_t start, size_t len );
 private:
 	std::string m_container;
 	size_t m_writehead;

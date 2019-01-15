@@ -86,3 +86,19 @@ void Buffer::Clear() {
 	m_writehead = 0;
 	m_written = 0;
 }
+
+size_t Buffer::Slice( size_t start, size_t len ) {
+	if ( start > m_written ) start = m_written;
+
+	m_container = m_container.substr( start, len );
+
+	m_written = m_container.size();
+
+	if ( m_writehead < start ) m_writehead = 0;
+	else if ( (m_writehead -= start) > m_written ) m_writehead = m_written;
+
+	if ( m_readhead < start ) m_readhead = 0;
+	else if ( (m_readhead -= start) > m_written ) m_readhead = m_written;
+
+	return m_written;
+}

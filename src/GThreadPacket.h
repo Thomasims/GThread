@@ -24,6 +24,7 @@ private:
 	std::string ReadData( size_t len );
 
 	size_t Seek( Head head, Location loc, ptrdiff_t bytes );
+	size_t Slice( size_t start, size_t end );
 
 private:
 
@@ -60,6 +61,8 @@ public:
 	static int ReadString( lua_State* );
 
 	static int Seek( lua_State* );
+	static int GetSize( lua_State* );
+	static int Slice( lua_State* );
 };
 
 typedef struct GThreadPacketHandle {
