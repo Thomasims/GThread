@@ -152,7 +152,7 @@ void GThreadChannel::Setup( lua_State* state ) {
 
 int GThreadChannel::PushGThreadChannel( lua_State* state, GThreadChannel* channel, GThread* parent ) {
 	if (!channel) return 0;
-	GThreadChannelHandle* handle = (GThreadChannelHandle*) lua_newuserdata( state, sizeof(GThreadChannelHandle) );
+	GThreadChannelHandle* handle = luaD_new<GThreadChannelHandle>( state );
 
 	handle->object = channel;
 	handle->parent = parent;

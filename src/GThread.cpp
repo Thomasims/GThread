@@ -242,7 +242,7 @@ void GThread::Setup( lua_State* state ) {
 }
 
 int GThread::PushGThread( lua_State* state, GThread* thread ) {
-	GThreadHandle* handle = (GThreadHandle*) lua_newuserdata( state, sizeof(GThreadHandle) );
+	GThreadHandle* handle = luaD_new<GThreadHandle>( state );
 	handle->object = thread;
 	luaL_getmetatable( state, "GThread" );
 	lua_setmetatable( state, -2 );
@@ -277,14 +277,29 @@ int GThread::_gc( lua_State* state ) {
 	return 0;
 }
 
+int stringwriter( lua_State* state, const void* chunk, size_t len, void* data ) {
+	if ( !data ) return 1;
+	((string*) data)->append( (const char*) chunk, len );
+	return 0;
+}
+
 int GThread::Run( lua_State* state ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
 	if ( !handle->object ) return luaL_error( state, "Invalid GThread" );
 
-	size_t size;
-	const char* code = luaL_checklstring( state, 2, &size );
+	string code;
+	if ( lua_isstring( state, 2 ) ) {
+		size_t size;
+		const char* code_c = luaL_checklstring( state, 2, &size );
+		code.append( code_c, size );
+	} else if ( lua_isfunction( state, 2 ) ) {
+		lua_pushvalue( state, 2 );
+		lua_dump( state, stringwriter, &code );
+		lua_pop( state, 1 );
+	} else
+		return 0;
 
-	handle->object->Run( string( code, size ) );
+	handle->object->Run( code );
 	return 0;
 }
 

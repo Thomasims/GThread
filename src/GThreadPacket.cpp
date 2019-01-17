@@ -94,7 +94,7 @@ int GThreadPacket::PushGThreadPacket( lua_State* state, GThreadPacket* packet ) 
 		lua_pushnil( state );
 		return 1;
 	}
-	GThreadPacketHandle* handle = (GThreadPacketHandle*) lua_newuserdata( state, sizeof(GThreadPacketHandle) );
+	GThreadPacketHandle* handle = luaD_new<GThreadPacketHandle>( state );
 	handle->object = packet;
 	++(packet->m_references);
 	luaL_getmetatable( state, "GThreadPacket" );
