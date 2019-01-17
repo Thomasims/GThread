@@ -242,8 +242,7 @@ void GThread::Setup( lua_State* state ) {
 }
 
 int GThread::PushGThread( lua_State* state, GThread* thread ) {
-	GThreadHandle* handle = luaD_new<GThreadHandle>( state );
-	handle->object = thread;
+	GThreadHandle* handle = luaD_new<GThreadHandle>( state, thread ); // TODO: Make a ctor/dtor
 	luaL_getmetatable( state, "GThread" );
 	lua_setmetatable( state, -2 );
 	return 1;
@@ -274,6 +273,7 @@ int GThread::_gc( lua_State* state ) {
 	if ( !handle->object ) return 0;
 	handle->object->DetachLua();
 	handle->object = NULL;
+	luaD_delete( handle );
 	return 0;
 }
 

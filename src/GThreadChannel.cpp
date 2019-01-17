@@ -152,14 +152,10 @@ void GThreadChannel::Setup( lua_State* state ) {
 
 int GThreadChannel::PushGThreadChannel( lua_State* state, GThreadChannel* channel, GThread* parent ) {
 	if (!channel) return 0;
-	GThreadChannelHandle* handle = luaD_new<GThreadChannelHandle>( state );
+	GThreadChannelHandle* handle = luaD_new<GThreadChannelHandle>( state, channel, parent, 0, nullptr, nullptr ); // TODO: Make a ctor/dtor
 
-	handle->object = channel;
-	handle->parent = parent;
 	if ( parent )
 		handle->id = parent->SetupNotifier( channel, (void*) handle );
-	handle->in_packet = NULL;
-	handle->out_packet = NULL;
 	++(channel->m_references);
 
 	channel->AddHandle( handle );
@@ -198,6 +194,8 @@ int GThreadChannel::_gc( lua_State* state ) {
 		delete handle->in_packet;
 	if ( handle->out_packet )
 		delete handle->out_packet;
+
+	luaD_delete( handle );
 
 	return 0;
 }

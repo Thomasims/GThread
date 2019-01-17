@@ -17,8 +17,13 @@
 template<class T, typename ...Args>
 T* luaD_new( lua_State* state, Args&&... args ) {
 	T* ptr = (T*) lua_newuserdata( state, sizeof(T) );
-	new(ptr) T( std::forward<Args>(args)... );
+	new(ptr) T{ std::forward<Args>( args )... };
 	return ptr;
+}
+
+template<class T>
+void luaD_delete( T* ptr ) {
+	ptr->~T();
 }
 
 enum ContextType {

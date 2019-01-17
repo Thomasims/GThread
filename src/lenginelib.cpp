@@ -47,9 +47,16 @@ static int engine_openchannel( lua_State* L ) {
 		GThreadChannel::PushGThreadChannel(L, pair.outgoing, thread);
 }
 
+static int engine__gc( lua_State* L ) {
+	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( L, 1, "engine" );
+	if ( !handle->object ) return 0;
+	handle->object = NULL;
+	luaD_delete( handle );
+	return 0;
+}
+
 int luaopen_engine( lua_State *L, GThread* thread ) {
-	GThreadHandle* handle = (GThreadHandle*) lua_newuserdata( L, sizeof(GThreadHandle) );
-	handle->object = thread;
+	GThreadHandle* handle = luaD_new<GThreadHandle>( L, thread ); // TODO: Make a ctor/dtor
 
 	GThreadChannel::Setup(L);
 	GThreadPacket::Setup(L);
@@ -59,17 +66,15 @@ int luaopen_engine( lua_State *L, GThread* thread ) {
 		lua_pushvalue( L, -1 );
 		lua_setfield( L, -2, "__index" );
 
-		lua_pushcfunction( L, engine_block );
-		lua_setfield( L, -2, "Block" );
+		luaD_setcfunction( L, "__gc", engine__gc );
 
-		lua_pushcfunction( L, engine_openchannel );
-		lua_setfield( L, -2, "OpenChannel" );
-
-		lua_pushcfunction( L, engine_createtimer );
-		lua_setfield( L, -2, "CreateTimer" );
-
-		lua_pushcfunction( L, GThreadPacket::Create );
-		lua_setfield( L, -2, "newPacket" );
+		luaD_setcfunction( L, "Block", engine_block );
+		luaD_setcfunction( L, "OpenChannel", engine_openchannel );
+		luaD_setcfunction( L, "CreateTimer", engine_createtimer );
+		
+		//luaD_setcfunction( L, "newThread", GThread::Create ); // ? could allow this
+		luaD_setcfunction( L, "newChannel", GThreadChannel::Create );
+		luaD_setcfunction( L, "newPacket", GThreadPacket::Create );
 
 		luaD_setnumber( L, "HEAD_W", Head::Write );
 		luaD_setnumber( L, "HEAD_R", Head::Read );

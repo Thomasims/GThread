@@ -94,8 +94,7 @@ int GThreadPacket::PushGThreadPacket( lua_State* state, GThreadPacket* packet ) 
 		lua_pushnil( state );
 		return 1;
 	}
-	GThreadPacketHandle* handle = luaD_new<GThreadPacketHandle>( state );
-	handle->object = packet;
+	GThreadPacketHandle* handle = luaD_new<GThreadPacketHandle>( state, packet ); // TODO: Make a ctor/dtor
 	++(packet->m_references);
 	luaL_getmetatable( state, "GThreadPacket" );
 	lua_setmetatable( state, -2 );
@@ -121,6 +120,8 @@ int GThreadPacket::_gc( lua_State* state ) {
 		delete handle->object;
 
 	handle->object = NULL;
+	luaD_delete( handle );
+
 	return 0;
 }
 
