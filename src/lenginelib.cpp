@@ -5,8 +5,6 @@
 #include "lua_headers.h"
 #include "def.h"
 #include "GThread.h"
-#include "GThreadChannel.h"
-#include "GThreadPacket.h"
 
 static int engine_block( lua_State* L ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( L, 1, "engine" );

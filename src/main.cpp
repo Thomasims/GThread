@@ -8,8 +8,6 @@
 #include "def.h"
 
 #include "GThread.h"
-#include "GThreadChannel.h"
-#include "GThreadPacket.h"
 
 DLL_EXPORT int gmod13_open( lua_State* state ) {
 	GThread::Setup( state );

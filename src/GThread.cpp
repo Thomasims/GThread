@@ -1,5 +1,4 @@
 #include "GThread.h"
-#include "GThreadChannel.h"
 
 #ifdef _WIN32
 #include <windows.h>

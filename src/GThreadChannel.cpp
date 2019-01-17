@@ -1,5 +1,3 @@
-#include "GThreadChannel.h"
-#include "GThreadPacket.h"
 #include "GThread.h"
 
 using namespace std;

@@ -1,4 +1,4 @@
-#include "Timing.hpp"
+#include "Timing.h"
 #include "GThread.h"
 
 using namespace std;
