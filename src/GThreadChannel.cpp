@@ -41,33 +41,29 @@ GThreadPacket* GThreadChannel::PopPacket() {
 	m_queue.pop();
 	m_queuemtx.unlock();
 
-	if ( CheckClosing() )
-		delete this;
-
 	return packet;
 }
 
 void GThreadChannel::QueuePacket( GThreadPacket* packet ) {
 	lock_guard<mutex> lck( m_queuemtx );
-	lock_guard<mutex> lck2( m_handlesmtx );
+	lock_guard<mutex> lck2( m_threadsmtx );
 
 	m_queue.push( new GThreadPacket(*packet) );
 
-	for ( GThreadChannelHandle* handle : m_handles ) {
-		if ( handle->parent )
-			handle->parent->WakeUp();
+	for ( GThread* thread : m_threads ) {
+		thread->WakeUp();
 	}
 }
 
 
-void GThreadChannel::AddHandle( GThreadChannelHandle* handle ) {
-	lock_guard<mutex> lck( m_handlesmtx );
-	m_handles.insert( handle );
+void GThreadChannel::AddThread( GThread* handle ) {
+	lock_guard<mutex> lck( m_threadsmtx );
+	m_threads.insert( handle );
 }
 
-void GThreadChannel::RemoveHandle( GThreadChannelHandle* handle ) {
-	lock_guard<mutex> lck( m_handlesmtx );
-	m_handles.erase( handle );
+void GThreadChannel::RemoveThread( GThread* handle ) {
+	lock_guard<mutex> lck( m_threadsmtx );
+	m_threads.erase( handle );
 }
 
 void GThreadChannel::DetachSibling() {
@@ -84,21 +80,6 @@ void GThreadChannel::SetSibling( GThreadChannel* other ) {
 	other->DetachSibling();
 	m_sibling = other;
 	other->m_sibling = this;
-}
-
-
-bool GThreadChannel::CheckClosing() {
-	{ return false; }
-	lock_guard<mutex> lck( m_queuemtx );
-	if ( m_closed && m_queue.empty() ) {
-		for ( GThreadChannelHandle* handle : m_handles ) {
-			handle->object = NULL;
-			if ( handle->parent )
-				handle->parent->RemoveNotifier( handle->id );
-		}
-		return true;
-	}
-	return false;
 }
 
 
@@ -152,11 +133,12 @@ int GThreadChannel::PushGThreadChannel( lua_State* state, GThreadChannel* channe
 	if (!channel) return 0;
 	GThreadChannelHandle* handle = luaD_new<GThreadChannelHandle>( state, channel, parent, 0, nullptr, nullptr ); // TODO: Make a ctor/dtor
 
-	if ( parent )
+	if ( parent ) {
 		handle->id = parent->SetupNotifier( channel, (void*) handle );
+		channel->AddThread( handle->parent );
+	}
 	++(channel->m_references);
 
-	channel->AddHandle( handle );
 
 	luaL_getmetatable( state, "GThreadChannel" );
 	lua_setmetatable( state, -2 );
@@ -193,14 +175,15 @@ int GThreadChannel::_gc( lua_State* state ) {
 	GThreadChannel* channel = handle->object;
 	if ( !channel ) return 0;
 
-	channel->RemoveHandle( handle );
 
 	if ( ! --channel->m_references )
 		delete channel;
 
 	handle->object = NULL;
-	if ( handle->parent )
+	if ( handle->parent ) {
 		handle->parent->RemoveNotifier( handle->id );
+		channel->RemoveThread( handle->parent );
+	}
 
 	if ( handle->in_packet )
 		delete handle->in_packet;
@@ -278,8 +261,6 @@ int GThreadChannel::Close( lua_State* state ) {
 	if ( !channel || channel->m_closed ) return 0;
 
 	channel->m_closed = true;
-	if ( channel->CheckClosing() )
-		delete channel;
 
 	return 0;
 }

@@ -27,25 +27,6 @@ class GThreadPacket;
 
 
 
-typedef struct GThreadHandle {
-	GThread* object;
-} GThreadHandle;
-
-typedef struct GThreadChannelHandle {
-	GThreadChannel* object;
-	GThread* parent;
-	lua_Integer id;
-
-	GThreadPacket* in_packet;
-	GThreadPacket* out_packet;
-} GThreadChannelHandle;
-
-typedef struct GThreadPacketHandle {
-	GThreadPacket* object;
-} GThreadPacketHandle;
-
-
-
 typedef struct DoubleChannel {
 	class GThreadChannel* outgoing;
 	class GThreadChannel* incoming;
@@ -141,8 +122,6 @@ private:
 	GThreadPacket* PopPacket();
 	void QueuePacket( GThreadPacket* );
 
-	bool CheckClosing();
-
 	void DetachSibling();
 
 private:
@@ -154,8 +133,8 @@ private:
 
 	std::queue<GThreadPacket*> m_queue;
 	std::mutex m_queuemtx;
-	std::unordered_set<GThreadChannelHandle*> m_handles;
-	std::mutex m_handlesmtx;
+	std::unordered_set<GThread*> m_threads;
+	std::mutex m_threadsmtx;
 
 public:
 
@@ -166,8 +145,8 @@ public:
 	bool ShouldResume( std::chrono::system_clock::time_point* until, void* data ) override;
 	int PushReturnValues( lua_State* state, void* data ) override;
 
-	void AddHandle( GThreadChannelHandle* handle );
-	void RemoveHandle( GThreadChannelHandle* handle );
+	void AddThread( GThread* handle );
+	void RemoveThread( GThread* handle );
 
 	void SetSibling( GThreadChannel* other );
 
@@ -318,3 +297,22 @@ int GThreadPacket::ReadString( lua_State* state ) {
 
 	return 1;
 }
+
+
+
+typedef struct GThreadHandle {
+	GThread* object;
+} GThreadHandle;
+
+typedef struct GThreadChannelHandle {
+	GThreadChannel* object;
+	GThread* parent;
+	lua_Integer id;
+
+	GThreadPacket* in_packet;
+	GThreadPacket* out_packet;
+} GThreadChannelHandle;
+
+typedef struct GThreadPacketHandle {
+	GThreadPacket* object;
+} GThreadPacketHandle;
