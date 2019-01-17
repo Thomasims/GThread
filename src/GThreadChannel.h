@@ -66,6 +66,8 @@ public:
 	static int Create( lua_State* state );
 
 	static GThreadChannel* Get( lua_State* state, int narg );
+	static GThreadPacket* GetPacketIn( lua_State* state, int narg );
+	static GThreadPacket* GetPacketOut( lua_State* state, int narg );
 
 	//Lua methods
 	static int _gc( lua_State* state );
