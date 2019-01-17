@@ -150,17 +150,20 @@ lua_Integer GThread::Wait( lua_State* state, set<lua_Integer> refs ) {
 	int ret = 0;
 	chrono::system_clock::time_point until = chrono::system_clock::now() + chrono::hours( 1 );
 
+	set<lua_Integer> newrefs;
 	for ( lua_Integer ref : refs ) { // This is absolute trash, rethink this whole notifiers thing
 		auto& it = m_notifiers.find( ref );
 		if ( it == end( m_notifiers ) )
 			continue;
 		NotifierInstance notifierins = it->second;
-		if ( !notifierins.notifier )
-			refs.insert( reinterpret_cast<lua_Integer>(notifierins.data) );
+		if ( notifierins.notifier )
+			newrefs.insert( ref );
+		else
+			newrefs.insert( reinterpret_cast<lua_Integer>(notifierins.data) );
 	}
 
 	while ( !m_killed ) {
-		for ( lua_Integer ref : refs ) {
+		for ( lua_Integer ref : newrefs ) {
 			auto& it = m_notifiers.find( ref );
 			if ( it == end( m_notifiers ) )
 				continue;
@@ -189,9 +192,13 @@ lua_Integer GThread::SetupNotifier( Notifier* notifier, void* data ) {
 	return id;
 }
 
-void GThread::RemoveNotifier( lua_Integer id ) {
-	lock_guard<mutex> lck( m_notifiersmtx );
-	m_notifiers.erase( id );
+void GThread::RemoveNotifier( lua_Integer id, bool nolock ) {
+	if( nolock ) {
+		m_notifiers.erase( id );
+	} else {
+		lock_guard<mutex> lck( m_notifiersmtx );
+		m_notifiers.erase( id );
+	}
 }
 
 lua_Integer GThread::CreateTimer( std::chrono::system_clock::time_point when ) {

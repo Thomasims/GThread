@@ -78,7 +78,7 @@ public:
 	void WakeUp();
 
 	lua_Integer SetupNotifier( Notifier* notifier, void* data );
-	void RemoveNotifier( lua_Integer id );
+	void RemoveNotifier( lua_Integer id, bool nolock = false );
 
 	lua_Integer CreateTimer( std::chrono::system_clock::time_point );
 

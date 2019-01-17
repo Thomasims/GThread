@@ -8,9 +8,12 @@ bool Timing::ShouldResume( system_clock::time_point* until, void* data ) {
 	auto& b = begin( times );
 	if( b == end( times ) )
 		return false;
-	if( b->first > system_clock::now() && *until > b->first )
+	system_clock::time_point now = system_clock::now();
+	if( b->first > now && *until > b->first )
 		*until = b->first;
-	return true;
+	if( b->first <= now )
+		return true;
+	return false;
 };
 
 int Timing::PushReturnValues( lua_State* state, void* data ) {
@@ -20,7 +23,7 @@ int Timing::PushReturnValues( lua_State* state, void* data ) {
 	lua_pushinteger( state, b->second );
 
 	GThread* thread = static_cast<GThread*>(data);
-	thread->RemoveNotifier( b->second );
+	thread->RemoveNotifier( b->second, true );
 	times.erase( b );
 	return 0;
 };
