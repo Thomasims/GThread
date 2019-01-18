@@ -28,11 +28,9 @@ GThread::~GThread() {
 	delete m_thread;
 	for ( const auto& res : m_channels ) {
 		if ( res.second.outgoing )
-			if ( !--(res.second.outgoing->m_references) )
-				delete res.second.outgoing;
+			res.second.outgoing->UnRef();
 		if ( res.second.incoming )
-			if ( !--(res.second.incoming->m_references) )
-				delete res.second.incoming;
+			res.second.incoming->UnRef();
 	}
 }
 
@@ -214,8 +212,8 @@ DoubleChannel GThread::OpenChannels( string name ) {
 
 		outgoing->SetSibling( incoming );
 
-		++(outgoing->m_references);
-		++(incoming->m_references);
+		outgoing->Ref();
+		incoming->Ref();
 		
 		return m_channels[name] = { outgoing, incoming };
 	}
@@ -332,12 +330,12 @@ int GThread::AttachChannel( lua_State* state ) {
 
 	if ( nargs >= 3 && lua_isuserdata( state, 3 ) && !channels->outgoing ) {
 		channels->outgoing = GThreadChannel::Get( state, 3 );
-		++(channels->outgoing->m_references);
+		channels->outgoing->Ref();
 	}
 
 	if ( nargs >= 4 && lua_isuserdata( state, 4 ) && !channels->incoming ) {
 		channels->incoming = GThreadChannel::Get( state, 4 );
-		++(channels->incoming->m_references);
+		channels->incoming->Ref();
 	}
 
 	if ( channels->outgoing && channels->incoming )

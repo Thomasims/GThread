@@ -64,6 +64,7 @@ void GThreadPacket::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "WriteUShort", WriteNumber <Get, uint16_t> );
 		luaD_setcfunction( state, "WriteUInt"  , WriteNumber <Get, uint32_t> );
 		luaD_setcfunction( state, "WriteULong" , WriteNumber <Get, uint64_t> );
+		luaD_setcfunction( state, "WriteSize"  , WriteNumber <Get, size_t> );
 		luaD_setcfunction( state, "WriteFloat" , WriteNumber <Get, float> );
 		luaD_setcfunction( state, "WriteDouble", WriteNumber <Get, double> );
 		luaD_setcfunction( state, "WriteData"  , WriteData   <Get> );
@@ -77,6 +78,7 @@ void GThreadPacket::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "ReadUShort", ReadNumber <Get, uint16_t> );
 		luaD_setcfunction( state, "ReadUInt"  , ReadNumber <Get, uint32_t> );
 		luaD_setcfunction( state, "ReadULong" , ReadNumber <Get, uint64_t> );
+		luaD_setcfunction( state, "ReadSize"  , ReadNumber <Get, size_t> );
 		luaD_setcfunction( state, "ReadFloat" , ReadNumber <Get, float> );
 		luaD_setcfunction( state, "ReadDouble", ReadNumber <Get, double> );
 		luaD_setcfunction( state, "ReadData"  , ReadData   <Get> );
@@ -94,10 +96,11 @@ int GThreadPacket::PushGThreadPacket( lua_State* state, GThreadPacket* packet ) 
 		lua_pushnil( state );
 		return 1;
 	}
-	GThreadPacketHandle* handle = luaD_new<GThreadPacketHandle>( state, packet ); // TODO: Make a ctor/dtor
-	++(packet->m_references);
+
+	GThreadPacketHandle* handle = luaD_new<GThreadPacketHandle>( state, packet );
 	luaL_getmetatable( state, "GThreadPacket" );
 	lua_setmetatable( state, -2 );
+
 	return 1;
 }
 
@@ -116,10 +119,6 @@ int GThreadPacket::_gc( lua_State* state ) {
 	GThreadPacketHandle* handle = (GThreadPacketHandle*) luaL_checkudata( state, 1, "GThreadPacket" );
 	if ( !handle->object ) return 0;
 
-	if ( ! --handle->object->m_references )
-		delete handle->object;
-
-	handle->object = NULL;
 	luaD_delete( handle );
 
 	return 0;

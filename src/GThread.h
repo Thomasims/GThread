@@ -58,7 +58,7 @@ private:
 
 private:
 
-	std::thread* m_thread;
+	std::thread* m_thread{nullptr};
 	std::map<std::string, DoubleChannel> m_channels;
 
 	Timing m_timing;
@@ -67,7 +67,7 @@ private:
 	std::map<lua_Integer, NotifierInstance> m_notifiers;
 	std::mutex m_notifiersmtx;
 	std::condition_variable m_notifierscvar;
-	lua_Integer m_topnotifierid;
+	lua_Integer m_topnotifierid{0};
 
 	std::queue<std::string> m_codequeue;
 	std::mutex m_codemtx;
@@ -76,7 +76,7 @@ private:
 	bool m_attached{true};
 	bool m_killed{false};
 
-	unsigned int m_id;
+	unsigned int m_id{0};
 
 	static unsigned int count;
 	static std::map<unsigned int, GThread*> detached;
@@ -114,8 +114,8 @@ public:
 
 
 
-class GThreadChannel : Notifier {
-	friend class GThread;
+class GThreadChannel : public Notifier {
+
 private:
 
 	//Private functions
@@ -129,7 +129,7 @@ private:
 	int m_references{0};
 	bool m_closed{false};
 
-	GThreadChannel* m_sibling{NULL};
+	GThreadChannel* m_sibling{nullptr};
 
 	std::queue<GThreadPacket*> m_queue;
 	std::mutex m_queuemtx;
@@ -141,6 +141,9 @@ public:
 	//Public functions
 	GThreadChannel();
 	virtual ~GThreadChannel();
+
+	void Ref() { ++m_references; };
+	void UnRef() { if(!--m_references) delete this; };
 
 	bool ShouldResume( std::chrono::system_clock::time_point* until, void* data ) override;
 	int PushReturnValues( lua_State* state, void* data ) override;
@@ -175,7 +178,7 @@ public:
 
 
 class GThreadPacket {
-	friend class GThreadChannel;
+
 private:
 
 	//Private functions
@@ -201,6 +204,9 @@ public:
 	//Public functions
 	GThreadPacket() = default;
 	GThreadPacket( const GThreadPacket& );
+
+	void Ref() { ++m_references; };
+	void UnRef() { if(!--m_references) delete this; };
 
 	void Clear();
 	int GetBytes();
@@ -301,18 +307,52 @@ int GThreadPacket::ReadString( lua_State* state ) {
 
 
 typedef struct GThreadHandle {
-	GThread* object;
+	GThread* object{ nullptr };
 } GThreadHandle;
 
 typedef struct GThreadChannelHandle {
-	GThreadChannel* object;
-	GThread* parent;
-	lua_Integer id;
+	GThreadChannelHandle( GThreadChannel* channel, GThread* parent )
+		: object{ channel }
+		, parent{ parent } {
+		channel->Ref();
+		if ( parent ) {
+			id = parent->SetupNotifier( channel, (void*) this );
+			channel->AddThread( parent );
+		}
+	};
+	~GThreadChannelHandle() {
+		if(parent) {
+			parent->RemoveNotifier( id );
+			object->RemoveThread( parent );
+		}
+		if ( in_packet )
+			delete in_packet;
+		if ( out_packet )
+			delete out_packet;
+		if( object )
+			object->UnRef();
+		object = nullptr;
+		parent = nullptr;
+	};
 
-	GThreadPacket* in_packet;
-	GThreadPacket* out_packet;
+	GThreadChannel* object{ nullptr };
+	GThread* parent{ nullptr };
+	lua_Integer id{ 0 };
+
+	GThreadPacket* in_packet{ nullptr };
+	GThreadPacket* out_packet{ nullptr };
 } GThreadChannelHandle;
 
 typedef struct GThreadPacketHandle {
-	GThreadPacket* object;
+	GThreadPacketHandle( GThreadPacket* packet)
+		:object{ packet } {
+		packet->Ref();
+	};
+	~GThreadPacketHandle() {
+		if( object )
+			object->UnRef();
+		object = nullptr;
+	};
+
+	GThreadPacket* object{ nullptr };
 } GThreadPacketHandle;
