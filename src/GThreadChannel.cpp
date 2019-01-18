@@ -108,6 +108,7 @@ void GThreadChannel::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "WriteUShort", GThreadPacket::WriteNumber <GetPacketOut, uint16_t> );
 		luaD_setcfunction( state, "WriteUInt"  , GThreadPacket::WriteNumber <GetPacketOut, uint32_t> );
 		luaD_setcfunction( state, "WriteULong" , GThreadPacket::WriteNumber <GetPacketOut, uint64_t> );
+		luaD_setcfunction( state, "WriteSize"  , GThreadPacket::WriteNumber <GetPacketOut, size_t> );
 		luaD_setcfunction( state, "WriteFloat" , GThreadPacket::WriteNumber <GetPacketOut, float> );
 		luaD_setcfunction( state, "WriteDouble", GThreadPacket::WriteNumber <GetPacketOut, double> );
 		luaD_setcfunction( state, "WriteData"  , GThreadPacket::WriteData   <GetPacketOut> );
@@ -122,6 +123,7 @@ void GThreadChannel::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "ReadUShort", GThreadPacket::ReadNumber <GetPacketIn, uint16_t> );
 		luaD_setcfunction( state, "ReadUInt"  , GThreadPacket::ReadNumber <GetPacketIn, uint32_t> );
 		luaD_setcfunction( state, "ReadULong" , GThreadPacket::ReadNumber <GetPacketIn, uint64_t> );
+		luaD_setcfunction( state, "ReadSize"  , GThreadPacket::ReadNumber <GetPacketIn, size_t> );
 		luaD_setcfunction( state, "ReadFloat" , GThreadPacket::ReadNumber <GetPacketIn, float> );
 		luaD_setcfunction( state, "ReadDouble", GThreadPacket::ReadNumber <GetPacketIn, double> );
 		luaD_setcfunction( state, "ReadData"  , GThreadPacket::ReadData   <GetPacketIn> );
@@ -133,17 +135,11 @@ void GThreadChannel::Setup( lua_State* state ) {
 
 int GThreadChannel::PushGThreadChannel( lua_State* state, GThreadChannel* channel, GThread* parent ) {
 	if (!channel) return 0;
-	GThreadChannelHandle* handle = luaD_new<GThreadChannelHandle>( state, channel, parent, 0, nullptr, nullptr ); // TODO: Make a ctor/dtor
 
-	if ( parent ) {
-		handle->id = parent->SetupNotifier( channel, (void*) handle );
-		channel->AddThread( handle->parent );
-	}
-	++(channel->m_references);
-
-
+	GThreadChannelHandle* handle = luaD_new<GThreadChannelHandle>( state, channel, parent );
 	luaL_getmetatable( state, "GThreadChannel" );
 	lua_setmetatable( state, -2 );
+
 	return 1;
 }
 
@@ -174,23 +170,7 @@ GThreadPacket* GThreadChannel::GetPacketOut( lua_State* state, int narg ) {
 
 int GThreadChannel::_gc( lua_State* state ) {
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
-	GThreadChannel* channel = handle->object;
-	if ( !channel ) return 0;
-
-
-	if ( ! --channel->m_references )
-		delete channel;
-
-	handle->object = NULL;
-	if ( handle->parent ) {
-		handle->parent->RemoveNotifier( handle->id );
-		channel->RemoveThread( handle->parent );
-	}
-
-	if ( handle->in_packet )
-		delete handle->in_packet;
-	if ( handle->out_packet )
-		delete handle->out_packet;
+	if ( !handle->object ) return 0;
 
 	luaD_delete( handle );
 
