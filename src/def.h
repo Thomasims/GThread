@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DEF_H
+#define DEF_H
 
 #include <new>
 
@@ -18,7 +19,7 @@ void inline luaD_setstring( lua_State* state, const char* name, const char* stri
 template<class T, typename ...Args>
 T* luaD_new( lua_State* state, Args&&... args ) {
 	T* ptr = (T*) lua_newuserdata( state, sizeof(T) );
-	new(ptr) T{ std::forward<Args>( args )... };
+	new(ptr) T( std::forward<Args>( args )... );
 	return ptr;
 }
 
@@ -41,3 +42,5 @@ enum Location {
 	Current,
 	End
 };
+
+#endif // DEF_H

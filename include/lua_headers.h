@@ -3,7 +3,8 @@
 	Only a few of these were tested, no guarantees they all work.
 */
 
-#pragma once
+#ifndef LUA_HEADERS_H
+#define LUA_HEADERS_H
 
 #include <stddef.h>
 
@@ -288,3 +289,5 @@ DLL_EXPORT int            luaopen_package      (lua_State *L);
 DLL_EXPORT int            luaopen_string       (lua_State *L);
 DLL_EXPORT int            luaopen_table        (lua_State *L);
            int            luaopen_coroutine    (lua_State *L);
+
+#endif // LUA_HEADERS_H

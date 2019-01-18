@@ -1,4 +1,5 @@
-#pragma once
+#ifndef GTHREAD_H
+#define GTHREAD_H
 
 #include <set>
 #include <map>
@@ -102,6 +103,12 @@ public:
 	static int PushGThread( lua_State*, GThread* );
 	static int Create( lua_State* );
 	static int GetDetached( lua_State* );
+
+	static int stringwriter( lua_State* state, const void* chunk, size_t len, void* data ) {
+		if ( !data ) return 1;
+		static_cast<std::string*>(data)->append( (const char*) chunk, len );
+		return 0;
+	}
 
 	//Lua methods
 	static int _gc( lua_State* );
@@ -226,10 +233,12 @@ public:
 	template<PacketGetter, class T> static int WriteNumber( lua_State* );
 	template<PacketGetter> static int WriteData( lua_State* );
 	template<PacketGetter> static int WriteString( lua_State* );
+	template<PacketGetter> static int WriteFunction( lua_State* );
 	
 	template<PacketGetter, class T> static int ReadNumber( lua_State* );
 	template<PacketGetter> static int ReadData( lua_State* );
 	template<PacketGetter> static int ReadString( lua_State* );
+	template<PacketGetter> static int ReadFunction( lua_State* );
 
 	static int Seek( lua_State* );
 	static int GetSize( lua_State* );
@@ -271,6 +280,23 @@ int GThreadPacket::WriteString( lua_State* state ) {
 	return 1;
 }
 
+template<GThreadPacket::PacketGetter GetP>
+int GThreadPacket::WriteFunction( lua_State* state ) {
+	GThreadPacket* packet = GetP( state, 1 );
+	if ( !packet ) return 0;
+
+	if ( !lua_isfunction( state, 2 ) ) return 0;
+	if ( lua_getupvalue( state, 2, 1 ) ) return luaL_error( state, "Function must not have upvalues" );
+
+	std::string code;
+	lua_pushvalue( state, 2 );
+	lua_dump( state, GThread::stringwriter, &code );
+	lua_pop( state, 1 );
+
+	lua_pushinteger( state, packet->Write( code.length() ) + packet->WriteData( code.data(), code.length() ) );
+	return 1;
+}
+
 
 template<GThreadPacket::PacketGetter GetP, class T>
 int GThreadPacket::ReadNumber( lua_State* state ) {
@@ -304,13 +330,43 @@ int GThreadPacket::ReadString( lua_State* state ) {
 	return 1;
 }
 
+template<GThreadPacket::PacketGetter GetP>
+int GThreadPacket::ReadFunction( lua_State* state ) {
+	GThreadPacket* packet = GetP( state, 1 );
+	if ( !packet ) return 0;
+	
+	size_t len = packet->Read<size_t>();
+
+	std::string code = packet->ReadData( len );
+	luaL_loadbuffer( state, code.data(), code.length(), "TFunc" );
+	lua_pushlstring( state, code.data(), code.length() );
+
+	return 2;
+}
 
 
-typedef struct GThreadHandle {
+
+struct GThreadHandle {
+	GThreadHandle( GThread* thread )
+		: object{ thread } {
+	};
+	~GThreadHandle() {
+		object = nullptr;
+	};
+	GThreadHandle( const GThreadHandle& ) = delete;
+	GThreadHandle& operator=( const GThreadHandle& ) = delete;
+	GThreadHandle( GThreadHandle&& other ) {
+		object = other.object; other.object = nullptr;
+	};
+	GThreadHandle& operator=(GThreadHandle&& other) {
+		std::swap( object, other.object );
+		return *this;
+	};
+
 	GThread* object{ nullptr };
-} GThreadHandle;
+};
 
-typedef struct GThreadChannelHandle {
+struct GThreadChannelHandle {
 	GThreadChannelHandle( GThreadChannel* channel, GThread* parent )
 		: object{ channel }
 		, parent{ parent } {
@@ -334,6 +390,23 @@ typedef struct GThreadChannelHandle {
 		object = nullptr;
 		parent = nullptr;
 	};
+	GThreadChannelHandle( const GThreadChannelHandle& ) = delete;
+	GThreadChannelHandle& operator=( const GThreadChannelHandle& ) = delete;
+	GThreadChannelHandle( GThreadChannelHandle&& other ) {
+		object = other.object; other.object = nullptr;
+		parent = other.parent; other.parent = nullptr;
+		id = other.id; other.id = 0;
+		in_packet = other.in_packet; other.in_packet = nullptr;
+		out_packet = other.out_packet; other.out_packet = nullptr;
+	};
+	GThreadChannelHandle& operator=(GThreadChannelHandle&& other) {
+		std::swap( object, other.object );
+		std::swap( parent, other.parent );
+		std::swap( id, other.id );
+		std::swap( in_packet, other.in_packet );
+		std::swap( out_packet, other.out_packet );
+		return *this;
+	};
 
 	GThreadChannel* object{ nullptr };
 	GThread* parent{ nullptr };
@@ -341,9 +414,9 @@ typedef struct GThreadChannelHandle {
 
 	GThreadPacket* in_packet{ nullptr };
 	GThreadPacket* out_packet{ nullptr };
-} GThreadChannelHandle;
+};
 
-typedef struct GThreadPacketHandle {
+struct GThreadPacketHandle {
 	GThreadPacketHandle( GThreadPacket* packet)
 		:object{ packet } {
 		packet->Ref();
@@ -353,6 +426,17 @@ typedef struct GThreadPacketHandle {
 			object->UnRef();
 		object = nullptr;
 	};
+	GThreadPacketHandle( const GThreadPacketHandle& ) = delete;
+	GThreadPacketHandle& operator=( const GThreadPacketHandle& ) = delete;
+	GThreadPacketHandle( GThreadPacketHandle&& other ) {
+		object = other.object; other.object = nullptr;
+	};
+	GThreadPacketHandle& operator=(GThreadPacketHandle&& other) {
+		std::swap( object, other.object );
+		return *this;
+	};
 
 	GThreadPacket* object{ nullptr };
-} GThreadPacketHandle;
+};
+
+#endif // GTHREAD_H

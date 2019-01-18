@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TIMING_H
+#define TIMING_H
 
 #include <map>
 #include <chrono>
@@ -15,3 +16,5 @@ public:
 
 	void CreatePoint( std::chrono::system_clock::time_point when, lua_Integer id );
 };
+
+#endif // TIMING_H

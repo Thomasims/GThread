@@ -228,7 +228,7 @@ void GThread::Setup( lua_State* state ) {
 }
 
 int GThread::PushGThread( lua_State* state, GThread* thread ) {
-	GThreadHandle* handle = luaD_new<GThreadHandle>( state, thread ); // TODO: Make a ctor/dtor
+	GThreadHandle* handle = luaD_new<GThreadHandle>( state, thread );
 	luaL_getmetatable( state, "GThread" );
 	lua_setmetatable( state, -2 );
 	return 1;
@@ -258,14 +258,7 @@ int GThread::_gc( lua_State* state ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
 	if ( !handle->object ) return 0;
 	handle->object->DetachLua();
-	handle->object = NULL;
 	luaD_delete( handle );
-	return 0;
-}
-
-int stringwriter( lua_State* state, const void* chunk, size_t len, void* data ) {
-	if ( !data ) return 1;
-	((string*) data)->append( (const char*) chunk, len );
 	return 0;
 }
 
