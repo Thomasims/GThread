@@ -1,4 +1,5 @@
-#pragma once
+#ifndef GTHREAD_H
+#define GTHREAD_H
 
 #include <set>
 #include <map>
@@ -437,3 +438,5 @@ struct GThreadPacketHandle {
 
 	GThreadPacket* object{ nullptr };
 };
+
+#endif // GTHREAD_H

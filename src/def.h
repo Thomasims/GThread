@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DEF_H
+#define DEF_H
 
 #include <new>
 
@@ -41,3 +42,5 @@ enum Location {
 	Current,
 	End
 };
+
+#endif // DEF_H

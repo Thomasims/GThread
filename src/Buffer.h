@@ -1,4 +1,6 @@
-#pragma once
+#ifndef BUFFER_H
+#define BUFFER_H
+
 #include <string>
 #include <cstdint>
 
@@ -23,3 +25,5 @@ private:
 	size_t m_readhead;
 	size_t m_written;
 };
+
+#endif // BUFFER_H
