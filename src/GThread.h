@@ -103,6 +103,12 @@ public:
 	static int Create( lua_State* );
 	static int GetDetached( lua_State* );
 
+	static int stringwriter( lua_State* state, const void* chunk, size_t len, void* data ) {
+		if ( !data ) return 1;
+		static_cast<std::string*>(data)->append( (const char*) chunk, len );
+		return 0;
+	}
+
 	//Lua methods
 	static int _gc( lua_State* );
 	static int Run( lua_State* );
@@ -220,10 +226,12 @@ public:
 	template<PacketGetter, class T> static int WriteNumber( lua_State* );
 	template<PacketGetter> static int WriteData( lua_State* );
 	template<PacketGetter> static int WriteString( lua_State* );
+	template<PacketGetter> static int WriteFunction( lua_State* );
 	
 	template<PacketGetter, class T> static int ReadNumber( lua_State* );
 	template<PacketGetter> static int ReadData( lua_State* );
 	template<PacketGetter> static int ReadString( lua_State* );
+	template<PacketGetter> static int ReadFunction( lua_State* );
 
 	static int Seek( lua_State* );
 	static int GetSize( lua_State* );
@@ -265,6 +273,23 @@ int GThreadPacket::WriteString( lua_State* state ) {
 	return 1;
 }
 
+template<GThreadPacket::PacketGetter GetP>
+int GThreadPacket::WriteFunction( lua_State* state ) {
+	GThreadPacket* packet = GetP( state, 1 );
+	if ( !packet ) return 0;
+
+	if ( !lua_isfunction( state, 2 ) ) return 0;
+	if ( lua_getupvalue( state, 2, 1 ) ) return luaL_error( state, "Function must not have upvalues" );
+
+	std::string code;
+	lua_pushvalue( state, 2 );
+	lua_dump( state, GThread::stringwriter, &code );
+	lua_pop( state, 1 );
+
+	lua_pushinteger( state, packet->Write( code.length() ) + packet->WriteData( code.data(), code.length() ) );
+	return 1;
+}
+
 
 template<GThreadPacket::PacketGetter GetP, class T>
 int GThreadPacket::ReadNumber( lua_State* state ) {
@@ -294,6 +319,19 @@ int GThreadPacket::ReadString( lua_State* state ) {
 
 	std::string data = packet->ReadData( len );
 	lua_pushlstring( state, data.data(), data.length() );
+
+	return 1;
+}
+
+template<GThreadPacket::PacketGetter GetP>
+int GThreadPacket::ReadFunction( lua_State* state ) {
+	GThreadPacket* packet = GetP( state, 1 );
+	if ( !packet ) return 0;
+	
+	size_t len = packet->Read<size_t>();
+
+	std::string code = packet->ReadData( len );
+	luaL_loadbuffer( state, code.data(), code.length(), "TFunc" );
 
 	return 1;
 }

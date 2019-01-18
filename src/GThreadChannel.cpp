@@ -112,6 +112,7 @@ void GThreadChannel::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "WriteDouble", GThreadPacket::WriteNumber <GetPacketOut, double> );
 		luaD_setcfunction( state, "WriteData"  , GThreadPacket::WriteData   <GetPacketOut> );
 		luaD_setcfunction( state, "WriteString", GThreadPacket::WriteString <GetPacketOut> );
+		luaD_setcfunction( state, "WriteFunction", GThreadPacket::WriteFunction <GetPacketOut> );
 
 		luaD_setcfunction( state, "ReadByte"  , GThreadPacket::ReadNumber <GetPacketIn, int8_t> );
 		luaD_setcfunction( state, "ReadShort" , GThreadPacket::ReadNumber <GetPacketIn, int16_t> );
@@ -125,6 +126,7 @@ void GThreadChannel::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "ReadDouble", GThreadPacket::ReadNumber <GetPacketIn, double> );
 		luaD_setcfunction( state, "ReadData"  , GThreadPacket::ReadData   <GetPacketIn> );
 		luaD_setcfunction( state, "ReadString", GThreadPacket::ReadString <GetPacketIn> );
+		luaD_setcfunction( state, "ReadFunction", GThreadPacket::ReadFunction <GetPacketOut> );
 	}
 	lua_pop( state, 1 );
 }

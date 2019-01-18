@@ -276,12 +276,6 @@ int GThread::_gc( lua_State* state ) {
 	return 0;
 }
 
-int stringwriter( lua_State* state, const void* chunk, size_t len, void* data ) {
-	if ( !data ) return 1;
-	((string*) data)->append( (const char*) chunk, len );
-	return 0;
-}
-
 int GThread::Run( lua_State* state ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
 	if ( !handle->object ) return luaL_error( state, "Invalid GThread" );
