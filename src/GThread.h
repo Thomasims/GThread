@@ -338,13 +338,17 @@ int GThreadPacket::ReadFunction( lua_State* state ) {
 
 	std::string code = packet->ReadData( len );
 	luaL_loadbuffer( state, code.data(), code.length(), "TFunc" );
+	lua_pushlstring( state, code.data(), code.length() );
 
-	return 1;
+	return 2;
 }
 
 
 
 typedef struct GThreadHandle {
+	GThreadHandle( GThread* thread )
+		: object{ thread } {
+	}
 	GThread* object{ nullptr };
 } GThreadHandle;
 
