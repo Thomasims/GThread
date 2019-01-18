@@ -269,7 +269,6 @@ int GThread::_gc( lua_State* state ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( state, 1, "GThread" );
 	if ( !handle->object ) return 0;
 	handle->object->DetachLua();
-	handle->object = NULL;
 	luaD_delete( handle );
 	return 0;
 }

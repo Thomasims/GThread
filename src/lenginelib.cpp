@@ -48,7 +48,6 @@ static int engine_openchannel( lua_State* L ) {
 static int engine__gc( lua_State* L ) {
 	GThreadHandle* handle = (GThreadHandle*) luaL_checkudata( L, 1, "engine" );
 	if ( !handle->object ) return 0;
-	handle->object = NULL;
 	luaD_delete( handle );
 	return 0;
 }

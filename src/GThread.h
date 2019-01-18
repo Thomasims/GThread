@@ -348,7 +348,11 @@ int GThreadPacket::ReadFunction( lua_State* state ) {
 typedef struct GThreadHandle {
 	GThreadHandle( GThread* thread )
 		: object{ thread } {
-	}
+	};
+	~GThreadHandle() {
+		object = nullptr;
+	};
+
 	GThread* object{ nullptr };
 } GThreadHandle;
 
