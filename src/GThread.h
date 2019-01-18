@@ -345,18 +345,27 @@ int GThreadPacket::ReadFunction( lua_State* state ) {
 
 
 
-typedef struct GThreadHandle {
+struct GThreadHandle {
 	GThreadHandle( GThread* thread )
 		: object{ thread } {
 	};
 	~GThreadHandle() {
 		object = nullptr;
 	};
+	GThreadHandle( const GThreadHandle& ) = delete;
+	GThreadHandle& operator=( const GThreadHandle& ) = delete;
+	GThreadHandle( GThreadHandle&& other ) {
+		object = other.object; other.object = nullptr;
+	};
+	GThreadHandle& operator=(GThreadHandle&& other) {
+		std::swap( object, other.object );
+		return *this;
+	};
 
 	GThread* object{ nullptr };
-} GThreadHandle;
+};
 
-typedef struct GThreadChannelHandle {
+struct GThreadChannelHandle {
 	GThreadChannelHandle( GThreadChannel* channel, GThread* parent )
 		: object{ channel }
 		, parent{ parent } {
@@ -380,6 +389,23 @@ typedef struct GThreadChannelHandle {
 		object = nullptr;
 		parent = nullptr;
 	};
+	GThreadChannelHandle( const GThreadChannelHandle& ) = delete;
+	GThreadChannelHandle& operator=( const GThreadChannelHandle& ) = delete;
+	GThreadChannelHandle( GThreadChannelHandle&& other ) {
+		object = other.object; other.object = nullptr;
+		parent = other.parent; other.parent = nullptr;
+		id = other.id; other.id = 0;
+		in_packet = other.in_packet; other.in_packet = nullptr;
+		out_packet = other.out_packet; other.out_packet = nullptr;
+	};
+	GThreadChannelHandle& operator=(GThreadChannelHandle&& other) {
+		std::swap( object, other.object );
+		std::swap( parent, other.parent );
+		std::swap( id, other.id );
+		std::swap( in_packet, other.in_packet );
+		std::swap( out_packet, other.out_packet );
+		return *this;
+	};
 
 	GThreadChannel* object{ nullptr };
 	GThread* parent{ nullptr };
@@ -387,9 +413,9 @@ typedef struct GThreadChannelHandle {
 
 	GThreadPacket* in_packet{ nullptr };
 	GThreadPacket* out_packet{ nullptr };
-} GThreadChannelHandle;
+};
 
-typedef struct GThreadPacketHandle {
+struct GThreadPacketHandle {
 	GThreadPacketHandle( GThreadPacket* packet)
 		:object{ packet } {
 		packet->Ref();
@@ -399,6 +425,15 @@ typedef struct GThreadPacketHandle {
 			object->UnRef();
 		object = nullptr;
 	};
+	GThreadPacketHandle( const GThreadPacketHandle& ) = delete;
+	GThreadPacketHandle& operator=( const GThreadPacketHandle& ) = delete;
+	GThreadPacketHandle( GThreadPacketHandle&& other ) {
+		object = other.object; other.object = nullptr;
+	};
+	GThreadPacketHandle& operator=(GThreadPacketHandle&& other) {
+		std::swap( object, other.object );
+		return *this;
+	};
 
 	GThreadPacket* object{ nullptr };
-} GThreadPacketHandle;
+};
