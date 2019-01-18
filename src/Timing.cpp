@@ -22,10 +22,8 @@ int Timing::PushReturnValues( lua_State* state, void* data ) {
 	lua_pop( state, 1 );
 	lua_pushinteger( state, b->second );
 
-	GThread* thread = static_cast<GThread*>(data);
-	thread->RemoveNotifier( b->second, true );
 	times.erase( b );
-	return 0;
+	return 1;
 };
 
 void Timing::CreatePoint( system_clock::time_point when, lua_Integer id ) {

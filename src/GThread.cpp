@@ -18,8 +18,6 @@ GThread::GThread() {
 	m_id = count++;
 	m_topnotifierid = 0;
 
-	m_timingid = SetupNotifier( (Notifier*) &m_timing, this );
-
 	m_thread = new thread( ThreadMain, this );
 }
 
@@ -147,20 +145,8 @@ lua_Integer GThread::Wait( lua_State* state, set<lua_Integer> refs ) {
 	int ret = 0;
 	chrono::system_clock::time_point until = chrono::system_clock::now() + chrono::hours( 1 );
 
-	set<lua_Integer> newrefs;
-	for ( lua_Integer ref : refs ) { // This is absolute trash, rethink this whole notifiers thing
-		auto& it = m_notifiers.find( ref );
-		if ( it == end( m_notifiers ) )
-			continue;
-		NotifierInstance notifierins = it->second;
-		if ( notifierins.notifier )
-			newrefs.insert( ref );
-		else
-			newrefs.insert( reinterpret_cast<lua_Integer>(notifierins.data) );
-	}
-
 	while ( !m_killed ) {
-		for ( lua_Integer ref : newrefs ) {
+		for ( lua_Integer ref : refs ) {
 			auto& it = m_notifiers.find( ref );
 			if ( it == end( m_notifiers ) )
 				continue;
@@ -169,6 +155,9 @@ lua_Integer GThread::Wait( lua_State* state, set<lua_Integer> refs ) {
 				lua_pushinteger( state, ref );
 				return notifierins.notifier->PushReturnValues( state, notifierins.data ) + 1;
 			}
+		}
+		if( m_timing.ShouldResume( &until, nullptr ) ) {
+			return m_timing.PushReturnValues( state, nullptr );
 		}
 		m_notifierscvar.wait_until( lck, until );
 	}
@@ -199,7 +188,7 @@ void GThread::RemoveNotifier( lua_Integer id, bool nolock ) {
 }
 
 lua_Integer GThread::CreateTimer( std::chrono::system_clock::time_point when ) {
-	lua_Integer id = SetupNotifier( nullptr, reinterpret_cast<void*>(m_timingid) );
+	lua_Integer id = m_topnotifierid++;
 	m_timing.CreatePoint( when, id );
 	return id;
 }
