@@ -4,6 +4,7 @@
 #include <set>
 #include <map>
 #include <queue>
+#include <deque>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -63,7 +64,6 @@ private:
 	std::map<std::string, DoubleChannel> m_channels;
 
 	Timing m_timing;
-	lua_Integer m_timingid;
 
 	std::map<lua_Integer, NotifierInstance> m_notifiers;
 	std::mutex m_notifiersmtx;
@@ -126,7 +126,7 @@ class GThreadChannel : public Notifier {
 private:
 
 	//Private functions
-	GThreadPacket* PopPacket();
+	GThreadPacket* PopPacket( std::set<uint16_t>&, bool );
 	void QueuePacket( GThreadPacket* );
 
 	void DetachSibling();
@@ -138,7 +138,7 @@ private:
 
 	GThreadChannel* m_sibling{nullptr};
 
-	std::queue<GThreadPacket*> m_queue;
+	std::deque<GThreadPacket*> m_queue;
 	std::mutex m_queuemtx;
 	std::unordered_set<GThread*> m_threads;
 	std::mutex m_threadsmtx;
@@ -180,12 +180,13 @@ public:
 
 	static int GetInPacket( lua_State* state );
 	static int GetOutPacket( lua_State* state );
+	static int SetFilter( lua_State* state );
 };
 
 
 
 class GThreadPacket {
-
+	friend class GThreadChannel;
 private:
 
 	//Private functions
@@ -205,6 +206,7 @@ private:
 
 	int m_references{ 0 };
 	Buffer m_buffer;
+	uint16_t m_tag{ 0 };
 
 public:
 
@@ -243,6 +245,8 @@ public:
 	static int Seek( lua_State* );
 	static int GetSize( lua_State* );
 	static int Slice( lua_State* );
+	static int SetFilter( lua_State* );
+	static int GetFilter( lua_State* );
 };
 
 
@@ -355,10 +359,10 @@ struct GThreadHandle {
 	};
 	GThreadHandle( const GThreadHandle& ) = delete;
 	GThreadHandle& operator=( const GThreadHandle& ) = delete;
-	GThreadHandle( GThreadHandle&& other ) {
+	GThreadHandle( GThreadHandle&& other ) noexcept {
 		object = other.object; other.object = nullptr;
 	};
-	GThreadHandle& operator=(GThreadHandle&& other) {
+	GThreadHandle& operator=(GThreadHandle&& other) noexcept {
 		std::swap( object, other.object );
 		return *this;
 	};
@@ -392,19 +396,23 @@ struct GThreadChannelHandle {
 	};
 	GThreadChannelHandle( const GThreadChannelHandle& ) = delete;
 	GThreadChannelHandle& operator=( const GThreadChannelHandle& ) = delete;
-	GThreadChannelHandle( GThreadChannelHandle&& other ) {
+	GThreadChannelHandle( GThreadChannelHandle&& other ) noexcept {
 		object = other.object; other.object = nullptr;
 		parent = other.parent; other.parent = nullptr;
 		id = other.id; other.id = 0;
 		in_packet = other.in_packet; other.in_packet = nullptr;
 		out_packet = other.out_packet; other.out_packet = nullptr;
+		filter = std::move(other.filter);
+		filter_exclusive = other.filter_exclusive;
 	};
-	GThreadChannelHandle& operator=(GThreadChannelHandle&& other) {
+	GThreadChannelHandle& operator=(GThreadChannelHandle&& other) noexcept {
 		std::swap( object, other.object );
 		std::swap( parent, other.parent );
 		std::swap( id, other.id );
 		std::swap( in_packet, other.in_packet );
 		std::swap( out_packet, other.out_packet );
+		filter = std::move(other.filter);
+		filter_exclusive = other.filter_exclusive;
 		return *this;
 	};
 
@@ -414,6 +422,9 @@ struct GThreadChannelHandle {
 
 	GThreadPacket* in_packet{ nullptr };
 	GThreadPacket* out_packet{ nullptr };
+
+	std::set<uint16_t> filter;
+	bool filter_exclusive{ false };
 };
 
 struct GThreadPacketHandle {
@@ -428,10 +439,10 @@ struct GThreadPacketHandle {
 	};
 	GThreadPacketHandle( const GThreadPacketHandle& ) = delete;
 	GThreadPacketHandle& operator=( const GThreadPacketHandle& ) = delete;
-	GThreadPacketHandle( GThreadPacketHandle&& other ) {
+	GThreadPacketHandle( GThreadPacketHandle&& other ) noexcept {
 		object = other.object; other.object = nullptr;
 	};
-	GThreadPacketHandle& operator=(GThreadPacketHandle&& other) {
+	GThreadPacketHandle& operator=(GThreadPacketHandle&& other) noexcept {
 		std::swap( object, other.object );
 		return *this;
 	};

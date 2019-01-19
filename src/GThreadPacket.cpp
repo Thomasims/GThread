@@ -5,6 +5,7 @@ using namespace std;
 GThreadPacket::GThreadPacket( const GThreadPacket& other )
 	: m_references{ 0 }
 	, m_buffer{ other.m_buffer }
+	, m_tag{ other.m_tag }
 {
 }
 
@@ -89,6 +90,8 @@ void GThreadPacket::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "Seek", Seek );
 		luaD_setcfunction( state, "GetSize", GetSize );
 		luaD_setcfunction( state, "Slice", Slice );
+		luaD_setcfunction( state, "SetFilter", SetFilter );
+		luaD_setcfunction( state, "GetFilter", GetFilter );
 	}
 	lua_pop( state, 1 );
 }
@@ -107,7 +110,13 @@ int GThreadPacket::PushGThreadPacket( lua_State* state, GThreadPacket* packet ) 
 }
 
 int GThreadPacket::Create( lua_State* state ) {
-	return PushGThreadPacket( state, new GThreadPacket() );
+	GThreadPacket* packet = new GThreadPacket();
+
+	if ( lua_gettop( state ) > 0 ) {
+		packet->m_tag = luaL_checkinteger( state, 1 );
+	}
+
+	return PushGThreadPacket( state, packet );
 }
 
 GThreadPacket* GThreadPacket::Get( lua_State* state, int narg ) {
@@ -162,4 +171,24 @@ int GThreadPacket::Slice( lua_State* state ) {
 	lua_pushinteger( state, packet->Slice( start, end ) );
 	return 1;
 
+}
+
+int GThreadPacket::SetFilter( lua_State* state ) {
+	GThreadPacketHandle* handle = (GThreadPacketHandle*) luaL_checkudata( state, 1, "GThreadPacket" );
+	GThreadPacket* packet = handle->object;
+	if ( !packet ) return 0;
+
+	packet->m_tag = luaL_checkinteger( state, 1 );
+
+	return 0;
+}
+
+int GThreadPacket::GetFilter( lua_State* state ) {
+	GThreadPacketHandle* handle = (GThreadPacketHandle*) luaL_checkudata( state, 1, "GThreadPacket" );
+	GThreadPacket* packet = handle->object;
+	if ( !packet ) return 0;
+
+	lua_pushinteger( state, packet->m_tag );
+
+	return 1;
 }

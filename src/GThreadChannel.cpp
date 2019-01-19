@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "GThread.h"
 
 using namespace std;
@@ -14,18 +16,21 @@ GThreadChannel::~GThreadChannel() {
 
 
 bool GThreadChannel::ShouldResume( chrono::system_clock::time_point* until, void* data ) {
-	// TODO: Check filter with data
+	if(m_queue.empty()) return false;
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) data;
 	m_queuemtx.lock();
-	if ( !m_queue.empty() )
+	auto& it = find_if(begin(m_queue), end(m_queue), [handle]( GThreadPacket* packet ) {
+		return handle->filter_exclusive == static_cast<bool>(handle->filter.count( packet->m_tag ));
+	});
+	if ( it != end(m_queue) )
 		return true;
 	m_queuemtx.unlock();
 	return false;
 }
 
 int GThreadChannel::PushReturnValues( lua_State* state, void* data ) {
-	// TODO: Check filter with data
 	GThreadChannelHandle* handle = (GThreadChannelHandle*) data;
-	GThreadPacket* packet = PopPacket();
+	GThreadPacket* packet = PopPacket( handle->filter, handle->filter_exclusive );
 
 	if ( handle->in_packet )
 		delete handle->in_packet;
@@ -33,12 +38,16 @@ int GThreadChannel::PushReturnValues( lua_State* state, void* data ) {
 	handle->in_packet = packet;
 
 	lua_pushinteger( state, packet->GetBytes() );
-	return 1;
+	lua_pushinteger( state, packet->m_tag );
+	return 2;
 }
 
-GThreadPacket* GThreadChannel::PopPacket() {
-	GThreadPacket* packet = m_queue.front();
-	m_queue.pop();
+GThreadPacket* GThreadChannel::PopPacket( set<uint16_t>& filter, bool exclusive ) {
+	auto& it = find_if(begin(m_queue), end(m_queue), [filter, exclusive]( GThreadPacket* packet ) {
+		return exclusive == static_cast<bool>(filter.count( packet->m_tag ));
+	});
+	GThreadPacket* packet = *it;
+	m_queue.erase(it);
 	m_queuemtx.unlock();
 
 	return packet;
@@ -48,7 +57,7 @@ void GThreadChannel::QueuePacket( GThreadPacket* packet ) {
 	lock_guard<mutex> lck( m_queuemtx );
 	lock_guard<mutex> lck2( m_threadsmtx );
 
-	m_queue.push( new GThreadPacket(*packet) );
+	m_queue.emplace_back( new GThreadPacket(*packet) );
 
 	for ( GThread* thread : m_threads ) {
 		thread->WakeUp();
@@ -99,6 +108,7 @@ void GThreadChannel::Setup( lua_State* state ) {
 
 		luaD_setcfunction( state, "GetInPacket", GetInPacket );
 		luaD_setcfunction( state, "GetOutPacket", GetOutPacket );
+		luaD_setcfunction( state, "SetFilter", SetFilter );
 
 		luaD_setcfunction( state, "WriteByte"    , GThreadPacket::WriteNumber   <GetPacketOut, int8_t> );
 		luaD_setcfunction( state, "WriteShort"   , GThreadPacket::WriteNumber   <GetPacketOut, int16_t> );
@@ -234,6 +244,10 @@ int GThreadChannel::StartPacket( lua_State* state ) {
 	else
 		handle->out_packet = new GThreadPacket();
 
+	if ( lua_gettop( state ) > 1 ) {
+		handle->out_packet->m_tag = luaL_checkinteger( state, 2 );
+	}
+
 	return 0;
 }
 
@@ -268,6 +282,27 @@ int GThreadChannel::GetOutPacket( lua_State* state ) {
 		GThreadPacket::PushGThreadPacket( state, handle->out_packet );
 		handle->out_packet = NULL;
 		return 1;
+	}
+
+	return 0;
+}
+
+int GThreadChannel::SetFilter( lua_State* state ) {
+	GThreadChannelHandle* handle = (GThreadChannelHandle*) luaL_checkudata( state, 1, "GThreadChannel" );
+	if ( !handle->object ) return 0;
+
+	handle->filter.clear();
+
+	int nargs = lua_gettop( state );
+	if( nargs > 1 ) {
+		lua_Integer first = luaL_checkinteger( state, 2 );
+		handle->filter_exclusive = first >= 0;
+
+		handle->filter.insert( abs( first ) );
+		for ( int i = 3; i <= nargs; ++i )
+			handle->filter.insert( abs( luaL_checkinteger( state, i ) ) );
+	} else {
+		handle->filter_exclusive = false;
 	}
 
 	return 0;
