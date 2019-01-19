@@ -18,7 +18,10 @@ static int engine_block( lua_State* L ) {
 		}
 	}
 
-	return handle->object->Wait( L, args ) || luaL_error( L, "Killed" );
+	int n = handle->object->Wait( L, args );
+	if ( n )
+		return n;
+	return luaL_error( L, "Killed" );
 }
 
 static int engine_createtimer( lua_State* L ) {
