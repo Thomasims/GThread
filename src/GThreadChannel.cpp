@@ -17,20 +17,24 @@ GThreadChannel::~GThreadChannel() {
 
 bool GThreadChannel::ShouldResume( chrono::system_clock::time_point* until, void* data ) {
 	if(m_queue.empty()) return false;
-	GThreadChannelHandle* handle = (GThreadChannelHandle*) data;
-	m_queuemtx.lock();
+	GThreadChannelHandle* handle = static_cast<GThreadChannelHandle*>(data);
+	lock_guard<mutex> lck( m_queuemtx );
 	auto& it = find_if(begin(m_queue), end(m_queue), [handle]( GThreadPacket* packet ) {
-		return handle->filter_exclusive == static_cast<bool>(handle->filter.count( packet->m_tag ));
+		return handle->filter_exclusive == (handle->filter.count( packet->m_tag ) > 0);
 	});
-	if ( it != end(m_queue) )
+	if ( it != end( m_queue ) ) {
+		if ( handle->tmp_packet )
+			delete handle->tmp_packet; // Should never happen
+		handle->tmp_packet = *it;
+		m_queue.erase(it);
 		return true;
-	m_queuemtx.unlock();
+	}
 	return false;
 }
 
 int GThreadChannel::PushReturnValues( lua_State* state, void* data ) {
-	GThreadChannelHandle* handle = (GThreadChannelHandle*) data;
-	GThreadPacket* packet = PopPacket( handle->filter, handle->filter_exclusive );
+	GThreadChannelHandle* handle = static_cast<GThreadChannelHandle*>(data);
+	GThreadPacket* packet = PopPacket( handle->filter, handle->filter_exclusive, data );
 
 	if ( handle->in_packet )
 		delete handle->in_packet;
@@ -42,13 +46,11 @@ int GThreadChannel::PushReturnValues( lua_State* state, void* data ) {
 	return 2;
 }
 
-GThreadPacket* GThreadChannel::PopPacket( set<uint16_t>& filter, bool exclusive ) {
-	auto& it = find_if(begin(m_queue), end(m_queue), [filter, exclusive]( GThreadPacket* packet ) {
-		return exclusive == static_cast<bool>(filter.count( packet->m_tag ));
-	});
-	GThreadPacket* packet = *it;
-	m_queue.erase(it);
-	m_queuemtx.unlock();
+GThreadPacket* GThreadChannel::PopPacket( set<uint16_t>& filter, bool exclusive, void* data ) {
+	GThreadChannelHandle* handle = static_cast<GThreadChannelHandle*>(data);
+
+	GThreadPacket* packet = handle->tmp_packet;
+	handle->tmp_packet = nullptr;
 
 	return packet;
 }

@@ -126,7 +126,7 @@ class GThreadChannel : public Notifier {
 private:
 
 	//Private functions
-	GThreadPacket* PopPacket( std::set<uint16_t>&, bool );
+	GThreadPacket* PopPacket( std::set<uint16_t>&, bool, void* );
 	void QueuePacket( GThreadPacket* );
 
 	void DetachSibling();
@@ -389,6 +389,8 @@ struct GThreadChannelHandle {
 			delete in_packet;
 		if ( out_packet )
 			delete out_packet;
+		if ( tmp_packet )
+			delete tmp_packet;
 		if( object )
 			object->UnRef();
 		object = nullptr;
@@ -422,6 +424,7 @@ struct GThreadChannelHandle {
 
 	GThreadPacket* in_packet{ nullptr };
 	GThreadPacket* out_packet{ nullptr };
+	GThreadPacket* tmp_packet{ nullptr };
 
 	std::set<uint16_t> filter;
 	bool filter_exclusive{ false };

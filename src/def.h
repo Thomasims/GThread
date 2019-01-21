@@ -1,6 +1,10 @@
 #ifndef DEF_H
 #define DEF_H
 
+#if _MSC_VER <= 1800
+#define noexcept
+#endif
+
 #include <new>
 
 void inline luaD_setcfunction( lua_State* state, const char* name, int( *func )(lua_State*), int upvalues = 0 ) {
