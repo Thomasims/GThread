@@ -40,7 +40,7 @@ size_t Buffer::ReadBytes( void* dst, size_t bytes ) {
 	return bytes;
 }
 
-size_t Buffer::Seek( int head, int location, ptrdiff_t bytes ) {
+size_t Buffer::Seek( int head, int location, std::ptrdiff_t bytes ) {
 	size_t* p_head = NULL;
 	switch ( head ) {
 	case 0:
@@ -57,19 +57,19 @@ size_t Buffer::Seek( int head, int location, ptrdiff_t bytes ) {
 	case 0:
 		if ( bytes < 0 )
 			return *p_head = 0;
-		else if ( bytes > ptrdiff_t( m_written ) )
+		else if ( bytes > std::ptrdiff_t( m_written ) )
 			return *p_head = m_written;
 		return *p_head = bytes;
 	case 1:
-		if ( -bytes > ptrdiff_t( *p_head ) )
+		if ( -bytes > std::ptrdiff_t( *p_head ) )
 			return *p_head = 0;
-		else if ( bytes > ptrdiff_t( m_written - m_writehead ) )
+		else if ( bytes > std::ptrdiff_t( m_written - m_writehead ) )
 			return *p_head = m_written;
 		return *p_head = *p_head + bytes;
 	case 2:
 		if ( bytes > 0 )
 			return *p_head = m_written;
-		else if ( -bytes > ptrdiff_t( m_written ) )
+		else if ( -bytes > std::ptrdiff_t( m_written ) )
 			return *p_head = 0;
 		return *p_head = m_written + bytes;
 	default:

@@ -9,7 +9,7 @@ public:
 	Buffer();
 	~Buffer();
 
-	size_t Seek( int head, int location, ptrdiff_t bytes );
+	size_t Seek( int head, int location, std::ptrdiff_t bytes );
 	
 	void WriteBytes( const void* data, size_t bytes );
 	
