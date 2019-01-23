@@ -19,7 +19,7 @@ bool GThreadChannel::ShouldResume( chrono::system_clock::time_point* until, void
 	if(m_queue.empty()) return false;
 	GThreadChannelHandle* handle = static_cast<GThreadChannelHandle*>(data);
 	lock_guard<mutex> lck( m_queuemtx );
-	auto& it = find_if(begin(m_queue), end(m_queue), [handle]( GThreadPacket* packet ) {
+	auto it = find_if(begin(m_queue), end(m_queue), [handle]( GThreadPacket* packet ) {
 		return handle->filter_exclusive == (handle->filter.count( packet->m_tag ) > 0);
 	});
 	if ( it != end( m_queue ) ) {

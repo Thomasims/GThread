@@ -5,7 +5,7 @@ using namespace std;
 using namespace std::chrono;
 
 bool Timing::ShouldResume( system_clock::time_point* until, void* data ) {
-	auto& b = begin( times );
+	auto b = begin( times );
 	if( b == end( times ) )
 		return false;
 	system_clock::time_point now = system_clock::now();
@@ -17,7 +17,7 @@ bool Timing::ShouldResume( system_clock::time_point* until, void* data ) {
 };
 
 int Timing::PushReturnValues( lua_State* state, void* data ) {
-	auto& b = begin( times );
+	auto b = begin( times );
 
 	lua_pop( state, 1 );
 	lua_pushinteger( state, b->second );

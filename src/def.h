@@ -1,7 +1,7 @@
 #ifndef DEF_H
 #define DEF_H
 
-#if _MSC_VER <= 1800
+#if _WIN32 && _MSC_VER <= 1800
 #define noexcept
 #endif
 

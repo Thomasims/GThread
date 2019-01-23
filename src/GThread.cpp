@@ -120,7 +120,7 @@ void GThread::ThreadMain( GThread* handle ) {
 
 				handle->m_killed = false;
 
-				int ret = luaL_loadbuffer( state, code.data(), code.length(), "GThread" ) || lua_pcall( state, 0, 0, NULL );
+				int ret = luaL_loadbuffer( state, code.data(), code.length(), "GThread" ) || lua_pcall( state, 0, 0, 0 );
 
 				if ( ret )
 					onerror( state );
@@ -147,7 +147,7 @@ lua_Integer GThread::Wait( lua_State* state, set<lua_Integer> refs ) {
 
 	while ( !m_killed ) {
 		for ( lua_Integer ref : refs ) {
-			auto& it = m_notifiers.find( ref );
+			auto it = m_notifiers.find( ref );
 			if ( it == end( m_notifiers ) )
 				continue;
 			NotifierInstance notifierins = it->second;
@@ -194,7 +194,7 @@ lua_Integer GThread::CreateTimer( std::chrono::system_clock::time_point when ) {
 }
 
 DoubleChannel GThread::OpenChannels( string name ) {
-	auto& res = m_channels.find(name);
+	auto res = m_channels.find(name);
 	if (res == end(m_channels)) {
 		GThreadChannel* outgoing = new GThreadChannel();
 		GThreadChannel* incoming = new GThreadChannel();
@@ -303,7 +303,7 @@ int GThread::AttachChannel( lua_State* state ) {
 	int nargs = lua_gettop( state );
 	
 	const char* name = luaL_checkstring( state, 2 );
-	auto& res = thread->m_channels.find( name );
+	auto res = thread->m_channels.find( name );
 	DoubleChannel* channels = NULL;
 	if ( res == end( thread->m_channels ) )
 		channels = &(thread->m_channels[name] = { NULL, NULL });

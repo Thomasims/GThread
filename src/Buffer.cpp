@@ -1,4 +1,5 @@
 #include "Buffer.h"
+#include <string.h>
 
 Buffer::Buffer()
 : m_writehead{ 0 }
