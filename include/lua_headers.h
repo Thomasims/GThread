@@ -9,8 +9,6 @@
 #include <stddef.h>
 #include <stdarg.h>
 
-#include <new>
-
 typedef struct lua_State lua_State;
 
 #ifdef _WIN32
@@ -296,6 +294,10 @@ DLL_EXPORT int            luaopen_table        (lua_State *L);
 
 // UTILITY
 
+#ifdef __cplusplus
+
+#include <new>
+
 void inline luaD_setcfunction( lua_State* state, const char* name, int( *func )(lua_State*), int upvalues = 0 ) {
 	lua_pushcclosure( state, func, upvalues );
 	lua_setfield( state, -2, name );
@@ -320,5 +322,7 @@ template<class T>
 void luaD_delete( T* ptr ) {
 	ptr->~T();
 }
+
+#endif // __cplusplus
 
 #endif // LUA_HEADERS_H
