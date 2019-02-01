@@ -8,6 +8,7 @@
 #define LUA_LIB
 
 #include "lua_headers.h"
+#include "def.h"
 
 
 #include <stdlib.h>

@@ -23,12 +23,6 @@
 
 
 
-class GThread;
-class GThreadChannel;
-class GThreadPacket;
-
-
-
 typedef struct DoubleChannel {
 	class GThreadChannel* outgoing;
 	class GThreadChannel* incoming;
@@ -38,8 +32,6 @@ typedef struct NotifierInstance {
 	Notifier* notifier;
 	void* data;
 } NotifierInstance;
-
-int luaopen_engine( lua_State *L, GThread* thread );
 
 
 
