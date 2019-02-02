@@ -245,8 +245,8 @@ public:
 	static int Seek( lua_State* );
 	static int GetSize( lua_State* );
 	static int Slice( lua_State* );
-	static int SetFilter( lua_State* );
-	static int GetFilter( lua_State* );
+	static int SetTag( lua_State* );
+	static int GetTag( lua_State* );
 };
 
 

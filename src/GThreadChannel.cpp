@@ -99,18 +99,16 @@ void GThreadChannel::Setup( lua_State* state ) {
 	{
 		lua_pushvalue( state, -1 );
 		lua_setfield( state, -2, "__index" );
-
 		luaD_setcfunction( state, "__gc", _gc );
-		luaD_setcfunction( state, "PullPacket", PullPacket );
+
+		luaD_setcfunction( state, "StartPacket", StartPacket );
 		luaD_setcfunction( state, "PushPacket", PushPacket );
 		luaD_setcfunction( state, "GetHandle", GetHandle );
-		//luaD_setcfunction( state, "SetFilter", SetFilter ); // Postponed
-		luaD_setcfunction( state, "StartPacket", StartPacket );
-		luaD_setcfunction( state, "Close", Close );
-
 		luaD_setcfunction( state, "GetInPacket", GetInPacket );
 		luaD_setcfunction( state, "GetOutPacket", GetOutPacket );
 		luaD_setcfunction( state, "SetFilter", SetFilter );
+		luaD_setcfunction( state, "PullPacket", PullPacket );
+		luaD_setcfunction( state, "Close", Close );
 
 		luaD_setcfunction( state, "WriteByte"    , GThreadPacket::WriteNumber   <GetPacketOut, int8_t> );
 		luaD_setcfunction( state, "WriteShort"   , GThreadPacket::WriteNumber   <GetPacketOut, int16_t> );

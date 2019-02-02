@@ -216,8 +216,8 @@ void GThread::Setup( lua_State* state ) {
 	{
 		lua_pushvalue( state, -1 );
 		lua_setfield( state, -2, "__index" );
-		
 		luaD_setcfunction( state, "__gc", _gc );
+
 		luaD_setcfunction( state, "Run", Run );
 		luaD_setcfunction( state, "OpenChannel", OpenChannel );
 		luaD_setcfunction( state, "AttachChannel", AttachChannel );

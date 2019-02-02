@@ -54,8 +54,13 @@ void GThreadPacket::Setup( lua_State* state ) {
 	{
 		lua_pushvalue( state, -1 );
 		lua_setfield( state, -2, "__index" );
-
 		luaD_setcfunction( state, "__gc", _gc );
+
+		luaD_setcfunction( state, "Seek", Seek );
+		luaD_setcfunction( state, "GetSize", GetSize );
+		luaD_setcfunction( state, "Slice", Slice );
+		luaD_setcfunction( state, "SetTag", SetTag );
+		luaD_setcfunction( state, "GetTag", GetTag );
 
 		luaD_setcfunction( state, "WriteByte"    , WriteNumber   <Get, int8_t> );
 		luaD_setcfunction( state, "WriteShort"   , WriteNumber   <Get, int16_t> );
@@ -86,12 +91,6 @@ void GThreadPacket::Setup( lua_State* state ) {
 		luaD_setcfunction( state, "ReadData"    , ReadData     <Get> );
 		luaD_setcfunction( state, "ReadString"  , ReadString   <Get> );
 		luaD_setcfunction( state, "ReadFunction", ReadFunction <Get> );
-
-		luaD_setcfunction( state, "Seek", Seek );
-		luaD_setcfunction( state, "GetSize", GetSize );
-		luaD_setcfunction( state, "Slice", Slice );
-		luaD_setcfunction( state, "SetFilter", SetFilter );
-		luaD_setcfunction( state, "GetFilter", GetFilter );
 	}
 	lua_pop( state, 1 );
 }
@@ -173,7 +172,7 @@ int GThreadPacket::Slice( lua_State* state ) {
 
 }
 
-int GThreadPacket::SetFilter( lua_State* state ) {
+int GThreadPacket::SetTag( lua_State* state ) {
 	GThreadPacketHandle* handle = (GThreadPacketHandle*) luaL_checkudata( state, 1, "GThreadPacket" );
 	GThreadPacket* packet = handle->object;
 	if ( !packet ) return 0;
@@ -183,7 +182,7 @@ int GThreadPacket::SetFilter( lua_State* state ) {
 	return 0;
 }
 
-int GThreadPacket::GetFilter( lua_State* state ) {
+int GThreadPacket::GetTag( lua_State* state ) {
 	GThreadPacketHandle* handle = (GThreadPacketHandle*) luaL_checkudata( state, 1, "GThreadPacket" );
 	GThreadPacket* packet = handle->object;
 	if ( !packet ) return 0;
